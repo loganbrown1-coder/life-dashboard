@@ -14,7 +14,10 @@ import { getSavingsGoals, getTransactionsForRange } from "@/db/queries/finances"
 import { getSleepLogsForRange } from "@/db/queries/sleep";
 import { getCheckInForDate } from "@/db/queries/check-in";
 import { getActiveSupplementsWithTodayStatus } from "@/db/queries/supplements";
+import { getWorkoutSchedule, getWorkoutsForRange } from "@/db/queries/workout-schedule";
+import { getUserOptions } from "@/db/queries/user-options";
 import { SupplementChecklist } from "@/components/home/supplement-checklist";
+import { WorkoutWeekPlan } from "@/components/health/workout-week-plan";
 import { completeTask } from "@/actions/tasks";
 import { db } from "@/db";
 import { accounts } from "@/db/schema";
@@ -39,6 +42,9 @@ export default async function HomePage() {
   const hour      = new Date().getHours();
   const weekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd");
   const weekEnd   = format(addDays(new Date(weekStart + "T00:00:00"), 6), "yyyy-MM-dd");
+  const weekDates = Array.from({ length: 7 }, (_, i) =>
+    format(addDays(new Date(weekStart + "T00:00:00"), i), "yyyy-MM-dd")
+  );
 
   const isSunday = new Date().getDay() === 0;
 
@@ -58,6 +64,9 @@ export default async function HomePage() {
     weekTxns,
     weekTasksDone,
     supplementsWithStatus,
+    workoutSchedule,
+    weekWorkoutCompletions,
+    workoutTypeOptions,
   ] = await Promise.all([
     getRoutinesWithItems(),
     getRoutineLogsForDate(today),
@@ -74,6 +83,9 @@ export default async function HomePage() {
     getTransactionsForRange(weekStart, weekEnd),
     getTasksCompletedInRange(weekStart, weekEnd),
     getActiveSupplementsWithTodayStatus(),
+    getWorkoutSchedule(),
+    getWorkoutsForRange(weekStart, weekEnd),
+    getUserOptions("workout_type"),
   ]);
 
   const morningRoutine = routinesWithItems.find((r) => r.timeOfDay === "morning");
@@ -125,8 +137,18 @@ export default async function HomePage() {
         />
       )}
 
-      {/* Morning check-in — only shows before noon, once per day (DB-backed) */}
+      {/* Morning check-in */}
       <MorningCheckIn checkInDismissed={checkIn?.dismissed ?? false} today={today} />
+
+      {/* Weekly workout plan */}
+      {workoutSchedule.length > 0 && (
+        <WorkoutWeekPlan
+          schedule={workoutSchedule}
+          weekDates={weekDates}
+          completions={weekWorkoutCompletions}
+          workoutTypes={workoutTypeOptions}
+        />
+      )}
 
       {/* Today */}
       <section>

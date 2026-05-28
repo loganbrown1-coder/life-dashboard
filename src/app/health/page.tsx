@@ -1,13 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { HealthNav } from "@/components/health/health-nav";
+import { WorkoutWeekPlan } from "@/components/health/workout-week-plan";
 import { getWorkoutsThisWeek, getWorkoutStreak, getWorkouts } from "@/db/queries/workouts";
+import { getWorkoutSchedule, getWorkoutsForRange } from "@/db/queries/workout-schedule";
+import { getUserOptions } from "@/db/queries/user-options";
 import { getLatestWeight, getWeightNDaysAgo } from "@/db/queries/weight";
 import { getTodaySteps, getLast30DaysSteps } from "@/db/queries/steps";
 import { getWeeklyAdherence } from "@/db/queries/supplements";
 import { getLastNightSleep, getAverageSleep } from "@/db/queries/sleep";
 import { Dumbbell, Scale, Footprints, Pill, Moon, TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { format, startOfWeek, endOfWeek } from "date-fns";
+import { format, startOfWeek, endOfWeek, addDays } from "date-fns";
 
 const WORKOUT_COLOURS: Record<string, string> = {
   push:           "bg-blue-100 text-blue-700",
@@ -41,7 +44,11 @@ export default async function HealthPage() {
   const weekStart = format(startOfWeek(today, { weekStartsOn: 1 }), "yyyy-MM-dd");
   const weekEnd   = format(endOfWeek(today,   { weekStartsOn: 1 }), "yyyy-MM-dd");
 
-  const [weekWorkouts, streak, latestWeight, weight7ago, todaySteps, stepsLast30, adherencePct, recentWorkouts, lastNightSleep, avgSleep7] =
+  const weekDates = Array.from({ length: 7 }, (_, i) =>
+    format(addDays(new Date(weekStart + "T00:00:00"), i), "yyyy-MM-dd")
+  );
+
+  const [weekWorkouts, streak, latestWeight, weight7ago, todaySteps, stepsLast30, adherencePct, recentWorkouts, lastNightSleep, avgSleep7, schedule, weekCompletions, workoutTypeOptions] =
     await Promise.all([
       getWorkoutsThisWeek(weekStart, weekEnd),
       getWorkoutStreak(),
@@ -53,6 +60,9 @@ export default async function HealthPage() {
       getWorkouts(7),
       getLastNightSleep(),
       getAverageSleep(7),
+      getWorkoutSchedule(),
+      getWorkoutsForRange(weekStart, weekEnd),
+      getUserOptions("workout_type"),
     ]);
 
   const completedThisWeek = weekWorkouts.filter((w) => w.completed).length;
@@ -76,6 +86,13 @@ export default async function HealthPage() {
       </div>
 
       <HealthNav />
+
+      <WorkoutWeekPlan
+        schedule={schedule}
+        weekDates={weekDates}
+        completions={weekCompletions}
+        workoutTypes={workoutTypeOptions}
+      />
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <Card className="rounded-xl shadow-sm">

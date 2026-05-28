@@ -115,7 +115,6 @@ export function WorkoutWeekPlan({ schedule, weekDates, completions, workoutTypes
                   label={workoutTypes.find((o) => o.value === amType)?.label ?? amType ?? ""}
                   slotLabel="AM"
                   isDone={amType ? doneSet.has(`${date}-${amType}`) : false}
-                  canToggle={(isToday || isPast) && !!amType}
                   onToggle={() => amType && handleToggle(date, amType)}
                 />
 
@@ -125,7 +124,6 @@ export function WorkoutWeekPlan({ schedule, weekDates, completions, workoutTypes
                   label={workoutTypes.find((o) => o.value === pmType)?.label ?? pmType ?? ""}
                   slotLabel="PM"
                   isDone={pmType ? doneSet.has(`${date}-${pmType}`) : false}
-                  canToggle={(isToday || isPast) && !!pmType}
                   onToggle={() => pmType && handleToggle(date, pmType)}
                 />
               </div>
@@ -140,13 +138,12 @@ export function WorkoutWeekPlan({ schedule, weekDates, completions, workoutTypes
 // ── Slot pill ─────────────────────────────────────────────────────────────────
 
 function SlotPill({
-  workoutType, label, slotLabel, isDone, canToggle, onToggle,
+  workoutType, label, slotLabel, isDone, onToggle,
 }: {
   workoutType?: string;
   label: string;
   slotLabel: string;
   isDone: boolean;
-  canToggle: boolean;
   onToggle: () => void;
 }) {
   if (!workoutType) {
@@ -158,21 +155,24 @@ function SlotPill({
   }
 
   return (
-    <button
-      onClick={canToggle ? onToggle : undefined}
-      disabled={!canToggle}
-      className={`flex-1 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 h-9 text-left transition-all
-        ${isDone
-          ? "bg-[#0d9488] text-white shadow-sm"
-          : canToggle
-            ? `${workoutBadgeColor(workoutType)} hover:opacity-90 active:scale-[0.98]`
-            : "bg-gray-100 text-gray-400 cursor-default opacity-60"
-        }`}
+    <div className={`flex-1 flex items-center gap-1.5 rounded-lg px-2 py-1.5 h-9
+      ${isDone ? "bg-[#0d9488] text-white shadow-sm" : workoutBadgeColor(workoutType)}`}
     >
       <span className="text-[10px] font-semibold uppercase opacity-70 shrink-0">{slotLabel}</span>
       <span className="text-xs font-semibold truncate flex-1">{label}</span>
-      {isDone && <Check className="w-3.5 h-3.5 shrink-0" />}
-    </button>
+      {/* Tick button — always tappable */}
+      <button
+        onClick={onToggle}
+        className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all active:scale-90
+          ${isDone
+            ? "border-white/60 bg-white/20 hover:bg-white/30"
+            : "border-current opacity-50 hover:opacity-100"
+          }`}
+        title={isDone ? "Mark undone" : "Mark done"}
+      >
+        {isDone && <Check className="w-3 h-3" />}
+      </button>
+    </div>
   );
 }
 
