@@ -357,6 +357,35 @@ export const userOptions = sqliteTable("user_options", {
 });
 
 // ---------------------------------------------------------------------------
+// WORKOUT SCHEDULE (weekly recurring plan)
+// ---------------------------------------------------------------------------
+
+// Defines which workout type is planned for each day of the week.
+// dayOfWeek: 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat, 7=Sun
+export const workoutSchedule = sqliteTable("workout_schedule", {
+  ...baseColumns,
+  dayOfWeek: integer("day_of_week").notNull(), // 1–7
+  workoutType: text("workout_type").notNull(),  // matches user_options value
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+});
+
+// ---------------------------------------------------------------------------
+// CALENDAR EVENTS (social, appointments, travel, etc.)
+// ---------------------------------------------------------------------------
+
+export const calendarEvents = sqliteTable("calendar_events", {
+  ...baseColumns,
+  date: text("date").notNull(),   // YYYY-MM-DD
+  title: text("title").notNull(),
+  type: text("type", {
+    enum: ["social", "appointment", "travel", "other"],
+  }).notNull().default("other"),
+  notes: text("notes"),
+  time: text("time"),             // HH:MM, optional
+  colour: text("colour").notNull().default("#6366f1"),
+});
+
+// ---------------------------------------------------------------------------
 // CHECK-IN LOGS
 // ---------------------------------------------------------------------------
 

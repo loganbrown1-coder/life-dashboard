@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { format, subDays } from "date-fns";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Moon, Footprints, X, ChevronRight, PoundSterling } from "lucide-react";
 import { logSteps, logSleep } from "@/actions/health";
 import { logQuickSpend } from "@/actions/finances";
@@ -26,16 +27,13 @@ export function MorningCheckIn({ checkInDismissed, today }: Props) {
   const [saving, setSaving]             = useState(false);
 
   const yesterday = format(subDays(new Date(), 1), "yyyy-MM-dd");
-  const hour      = new Date().getHours();
-  const isMorning = hour >= 5 && hour < 12;
 
   useEffect(() => {
-    if (!isMorning) return;
     if (!checkInDismissed) {
       const timer = setTimeout(() => setVisible(true), 800);
       return () => clearTimeout(timer);
     }
-  }, [isMorning, checkInDismissed]);
+  }, [checkInDismissed]);
 
   async function dismiss() {
     await upsertCheckIn(today, { dismissed: true });

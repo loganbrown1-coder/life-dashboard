@@ -2,8 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { format, parseISO, addWeeks, subWeeks, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth } from "date-fns";
-import { ChevronLeft, ChevronRight, Dumbbell, UtensilsCrossed, ListTodo, Plus } from "lucide-react";
+import {
+  format, parseISO, addWeeks, subWeeks, addMonths, subMonths,
+  startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth,
+} from "date-fns";
+import {
+  ChevronLeft, ChevronRight, UtensilsCrossed, ListTodo, Plus, Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
@@ -11,80 +16,75 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Link from "next/link";
 import { addTask } from "@/actions/projects";
 import { logWorkout } from "@/actions/health";
+import { addCalendarEvent, deleteCalendarEvent } from "@/actions/calendar-events";
+import { workoutDotColor } from "@/lib/workout-colors";
 
 type WorkoutRow = {
-  id: string;
-  date: string;
-  type: string;
-  durationMinutes?: number | null;
-  completed: boolean;
+  id: string; date: string; type: string; durationMinutes?: number | null; completed: boolean;
 };
-
 type PlanRow = {
-  id: string;
-  date: string;
-  mealSlot: string;
-  meal: { name: string } | null;
+  id: string; date: string; mealSlot: string; meal: { name: string } | null;
 };
-
 type TaskRow = {
-  id: string;
-  title: string;
-  dueDate?: string | null;
-  priority: string;
-  status: string;
+  id: string; title: string; dueDate?: string | null; priority: string; status: string;
+};
+type EventRow = {
+  id: string; date: string; title: string; type: string; notes?: string | null; time?: string | null; colour: string;
 };
 
 export type CalendarWorkoutType = { value: string; label: string };
 
 type Props = {
-  anchor: string;
-  view: "week" | "month";
-  workouts: WorkoutRow[];
-  plans: PlanRow[];
-  tasks: TaskRow[];
+  anchor:       string;
+  view:         "week" | "month";
+  workouts:     WorkoutRow[];
+  plans:        PlanRow[];
+  tasks:        TaskRow[];
+  events:       EventRow[];
   showWorkouts: boolean;
-  showMeals: boolean;
-  showTasks: boolean;
+  showMeals:    boolean;
+  showTasks:    boolean;
+  showEvents:   boolean;
   workoutTypes: CalendarWorkoutType[];
 };
 
-const WORKOUT_COLORS: Record<string, string> = {
-  push:           "bg-orange-500",
-  pull:           "bg-blue-500",
-  legs:           "bg-purple-500",
-  core:           "bg-pink-500",
-  arms_shoulders: "bg-yellow-500",
-  run:            "bg-green-500",
-  swim:           "bg-cyan-500",
-  walk:           "bg-teal-400",
-  stretch:        "bg-indigo-400",
-  rest:           "bg-gray-400",
-  other:          "bg-gray-500",
+const EVENT_TYPE_COLOURS: Record<string, string> = {
+  social:      "#6366f1",
+  appointment: "#f59e0b",
+  travel:      "#0d9488",
+  other:       "#8b5cf6",
 };
 
-export function CalendarClient({ anchor, view: initialView, workouts, plans, tasks, showWorkouts: sw, showMeals: sm, showTasks: st, workoutTypes }: Props) {
+export function CalendarClient({
+  anchor, view: initialView,
+  workouts, plans, tasks, events,
+  showWorkouts: sw, showMeals: sm, showTasks: st, showEvents: se,
+  workoutTypes,
+}: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
-  const [view, setView] = useState<"week" | "month">(initialView);
+  const [view, setView]               = useState<"week" | "month">(initialView);
   const [showWorkouts, setShowWorkouts] = useState(sw);
-  const [showMeals, setShowMeals] = useState(sm);
-  const [showTasks, setShowTasks] = useState(st);
-  const [sheetDate, setSheetDate] = useState<string | null>(null);
+  const [showMeals, setShowMeals]       = useState(sm);
+  const [showTasks, setShowTasks]       = useState(st);
+  const [showEvents, setShowEvents]     = useState(se);
+  const [sheetDate, setSheetDate]       = useState<string | null>(null);
 
-  // Add-task form state
-  const [showTaskForm, setShowTaskForm] = useState(false);
-  const [taskTitle, setTaskTitle] = useState("");
-
-  // Add-workout form state
+  // Form state
+  const [showTaskForm, setShowTaskForm]       = useState(false);
+  const [taskTitle, setTaskTitle]             = useState("");
   const [showWorkoutForm, setShowWorkoutForm] = useState(false);
-  const [workoutType, setWorkoutType] = useState(() => workoutTypes[0]?.value ?? "other");
+  const [workoutType, setWorkoutType]         = useState(() => workoutTypes[0]?.value ?? "other");
   const [workoutDuration, setWorkoutDuration] = useState("");
+  const [showEventForm, setShowEventForm]     = useState(false);
+  const [eventTitle, setEventTitle]           = useState("");
+  const [eventType, setEventType]             = useState<"social"|"appointment"|"travel"|"other">("social");
+  const [eventTime, setEventTime]             = useState("");
 
   const anchorDate = parseISO(anchor);
   const today = format(new Date(), "yyyy-MM-dd");
 
-  // Build days for display
+  // Build day list
   let days: string[] = [];
   if (view === "week") {
     const weekStart = startOfWeek(anchorDate, { weekStartsOn: 1 });
@@ -93,12 +93,9 @@ export function CalendarClient({ anchor, view: initialView, workouts, plans, tas
     const monthStart = startOfMonth(anchorDate);
     const monthEnd   = endOfMonth(anchorDate);
     const gridStart  = startOfWeek(monthStart, { weekStartsOn: 1 });
-    const gridEnd    = endOfWeek(monthEnd, { weekStartsOn: 1 });
+    const gridEnd    = endOfWeek(monthEnd,     { weekStartsOn: 1 });
     let cur = gridStart;
-    while (cur <= gridEnd) {
-      days.push(format(cur, "yyyy-MM-dd"));
-      cur = addDays(cur, 1);
-    }
+    while (cur <= gridEnd) { days.push(format(cur, "yyyy-MM-dd")); cur = addDays(cur, 1); }
   }
 
   function navigate(dir: "prev" | "next") {
@@ -111,17 +108,14 @@ export function CalendarClient({ anchor, view: initialView, workouts, plans, tas
     router.push(`/calendar?view=${view}&anchor=${format(newAnchor, "yyyy-MM-dd")}`);
   }
 
-  // Build lookup maps
+  // Lookup maps
   const workoutsByDate: Record<string, WorkoutRow[]> = {};
   for (const w of workouts) {
     if (!workoutsByDate[w.date]) workoutsByDate[w.date] = [];
     workoutsByDate[w.date].push(w);
   }
-
   const plansByDate: Record<string, number> = {};
-  for (const p of plans) {
-    plansByDate[p.date] = (plansByDate[p.date] ?? 0) + 1;
-  }
+  for (const p of plans) plansByDate[p.date] = (plansByDate[p.date] ?? 0) + 1;
 
   const tasksByDate: Record<string, TaskRow[]> = {};
   for (const t of tasks) {
@@ -129,10 +123,16 @@ export function CalendarClient({ anchor, view: initialView, workouts, plans, tas
     if (!tasksByDate[t.dueDate]) tasksByDate[t.dueDate] = [];
     tasksByDate[t.dueDate].push(t);
   }
+  const eventsByDate: Record<string, EventRow[]> = {};
+  for (const e of events) {
+    if (!eventsByDate[e.date]) eventsByDate[e.date] = [];
+    eventsByDate[e.date].push(e);
+  }
 
   const sheetWorkouts = sheetDate ? (workoutsByDate[sheetDate] ?? []) : [];
   const sheetPlans    = sheetDate ? plans.filter((p) => p.date === sheetDate) : [];
   const sheetTasks    = sheetDate ? (tasksByDate[sheetDate] ?? []) : [];
+  const sheetEvents   = sheetDate ? (eventsByDate[sheetDate] ?? []) : [];
 
   const periodLabel = view === "week"
     ? `${format(parseISO(days[0]), "MMM d")} – ${format(parseISO(days[6]), "MMM d, yyyy")}`
@@ -140,38 +140,38 @@ export function CalendarClient({ anchor, view: initialView, workouts, plans, tas
 
   function openSheet(dateStr: string) {
     setSheetDate(dateStr);
-    setShowTaskForm(false);
-    setShowWorkoutForm(false);
-    setTaskTitle("");
-    setWorkoutType("push");
-    setWorkoutDuration("");
+    setShowTaskForm(false); setShowWorkoutForm(false); setShowEventForm(false);
+    setTaskTitle(""); setEventTitle(""); setEventTime("");
+    setWorkoutType(workoutTypes[0]?.value ?? "other"); setWorkoutDuration("");
   }
 
   function handleAddTask() {
     if (!taskTitle.trim() || !sheetDate) return;
     startTransition(async () => {
       await addTask({ title: taskTitle.trim(), dueDate: sheetDate, status: "todo", priority: "med" });
-      setTaskTitle("");
-      setShowTaskForm(false);
-      router.refresh();
+      setTaskTitle(""); setShowTaskForm(false); router.refresh();
     });
   }
 
   function handleLogWorkout() {
     if (!sheetDate) return;
     startTransition(async () => {
-      await logWorkout({
-        date: sheetDate,
-        type: workoutType as "push" | "pull" | "legs" | "core" | "arms_shoulders" | "run" | "swim" | "walk" | "stretch" | "rest" | "other",
-        durationMinutes: workoutDuration ? Number(workoutDuration) : undefined,
-        notes: "",
-        completed: true,
-        exercises: [],
-      });
-      setWorkoutDuration("");
-      setShowWorkoutForm(false);
-      router.refresh();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await logWorkout({ date: sheetDate, type: workoutType as any, durationMinutes: workoutDuration ? Number(workoutDuration) : undefined, notes: "", completed: true, exercises: [] });
+      setWorkoutDuration(""); setShowWorkoutForm(false); router.refresh();
     });
+  }
+
+  function handleAddEvent() {
+    if (!eventTitle.trim() || !sheetDate) return;
+    startTransition(async () => {
+      await addCalendarEvent({ date: sheetDate, title: eventTitle.trim(), type: eventType, time: eventTime || undefined, colour: EVENT_TYPE_COLOURS[eventType] ?? "#6366f1" });
+      setEventTitle(""); setEventTime(""); setShowEventForm(false); router.refresh();
+    });
+  }
+
+  function handleDeleteEvent(id: string) {
+    startTransition(async () => { await deleteCalendarEvent(id); router.refresh(); });
   }
 
   return (
@@ -179,33 +179,23 @@ export function CalendarClient({ anchor, view: initialView, workouts, plans, tas
       {/* Controls */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => navigate("prev")}>
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
+          <Button variant="outline" size="icon" onClick={() => navigate("prev")}><ChevronLeft className="w-4 h-4" /></Button>
           <span className="text-sm font-medium text-gray-700 min-w-[180px] text-center">{periodLabel}</span>
-          <Button variant="outline" size="icon" onClick={() => navigate("next")}>
-            <ChevronRight className="w-4 h-4" />
-          </Button>
+          <Button variant="outline" size="icon" onClick={() => navigate("next")}><ChevronRight className="w-4 h-4" /></Button>
         </div>
-
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex rounded-lg border overflow-hidden text-xs">
-            <button
-              onClick={() => { setView("week"); router.push(`/calendar?view=week&anchor=${anchor}`); }}
-              className={`px-3 py-1.5 font-medium transition-colors ${view === "week" ? "bg-[#0d9488] text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
-            >Week</button>
-            <button
-              onClick={() => { setView("month"); router.push(`/calendar?view=month&anchor=${anchor}`); }}
-              className={`px-3 py-1.5 font-medium transition-colors border-l ${view === "month" ? "bg-[#0d9488] text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
-            >Month</button>
+            <button onClick={() => { setView("week"); router.push(`/calendar?view=week&anchor=${anchor}`); }} className={`px-3 py-1.5 font-medium transition-colors ${view === "week" ? "bg-[#0d9488] text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>Week</button>
+            <button onClick={() => { setView("month"); router.push(`/calendar?view=month&anchor=${anchor}`); }} className={`px-3 py-1.5 font-medium transition-colors border-l ${view === "month" ? "bg-[#0d9488] text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>Month</button>
           </div>
-          <ToggleChip active={showWorkouts} onChange={setShowWorkouts} color="bg-orange-500" label="Workouts" />
-          <ToggleChip active={showMeals}    onChange={setShowMeals}    color="bg-teal-500"   label="Meals" />
-          <ToggleChip active={showTasks}    onChange={setShowTasks}    color="bg-purple-500" label="Tasks" />
+          <ToggleChip active={showWorkouts} onChange={setShowWorkouts} color="bg-orange-400" label="Workouts" />
+          <ToggleChip active={showMeals}    onChange={setShowMeals}    color="bg-teal-400"   label="Meals" />
+          <ToggleChip active={showTasks}    onChange={setShowTasks}    color="bg-purple-400" label="Tasks" />
+          <ToggleChip active={showEvents}   onChange={setShowEvents}   color="bg-indigo-400" label="Events" />
         </div>
       </div>
 
-      {/* Day headers (month only) */}
+      {/* Month day headers */}
       {view === "month" && (
         <div className="grid grid-cols-7 mb-1">
           {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map((d) => (
@@ -222,33 +212,20 @@ export function CalendarClient({ anchor, view: initialView, workouts, plans, tas
             const dayWorkouts = showWorkouts ? (workoutsByDate[dateStr] ?? []) : [];
             const mealCount   = showMeals ? (plansByDate[dateStr] ?? 0) : 0;
             const dayTasks    = showTasks ? (tasksByDate[dateStr] ?? []) : [];
-
+            const dayEvents   = showEvents ? (eventsByDate[dateStr] ?? []) : [];
             return (
-              <button
-                key={dateStr}
-                onClick={() => openSheet(dateStr)}
-                className={`rounded-xl border p-3 text-left hover:border-[#0d9488] transition-colors ${isToday ? "border-[#0d9488] bg-[#0d9488]/5" : "bg-white"}`}
-              >
+              <button key={dateStr} onClick={() => openSheet(dateStr)} className={`rounded-xl border p-3 text-left hover:border-[#0d9488] transition-colors ${isToday ? "border-[#0d9488] bg-[#0d9488]/5" : "bg-white"}`}>
                 <p className="text-xs font-semibold text-gray-400 uppercase">{format(parseISO(dateStr), "EEE")}</p>
-                <p className={`text-lg font-bold mb-2 ${isToday ? "text-[#0d9488]" : "text-gray-900"}`}>
-                  {format(parseISO(dateStr), "d")}
-                </p>
+                <p className={`text-lg font-bold mb-2 ${isToday ? "text-[#0d9488]" : "text-gray-900"}`}>{format(parseISO(dateStr), "d")}</p>
                 <div className="space-y-1">
                   {dayWorkouts.map((w) => (
-                    <div key={w.id} className={`text-[10px] text-white rounded-full px-1.5 py-0.5 capitalize truncate ${WORKOUT_COLORS[w.type] ?? "bg-gray-500"}`}>
-                      {w.type.replace("_", " ")}
+                    <div key={w.id} className={`text-[10px] text-white rounded-full px-1.5 py-0.5 capitalize truncate ${workoutDotColor(w.type)}`}>
+                      {workoutTypes.find((t) => t.value === w.type)?.label ?? w.type.replace(/_/g, " ")}
                     </div>
                   ))}
-                  {mealCount > 0 && (
-                    <div className="text-[10px] text-teal-700 bg-teal-50 rounded-full px-1.5 py-0.5 flex items-center gap-0.5">
-                      <UtensilsCrossed className="w-2.5 h-2.5" /> {mealCount}/4
-                    </div>
-                  )}
-                  {dayTasks.map((t) => (
-                    <div key={t.id} className="text-[10px] text-purple-700 bg-purple-50 rounded-full px-1.5 py-0.5 truncate">
-                      {t.title}
-                    </div>
-                  ))}
+                  {mealCount > 0 && <div className="text-[10px] text-teal-700 bg-teal-50 rounded-full px-1.5 py-0.5 flex items-center gap-0.5"><UtensilsCrossed className="w-2.5 h-2.5" /> {mealCount}/4</div>}
+                  {dayTasks.map((t) => <div key={t.id} className="text-[10px] text-purple-700 bg-purple-50 rounded-full px-1.5 py-0.5 truncate">{t.title}</div>)}
+                  {dayEvents.map((e) => <div key={e.id} className="text-[10px] text-white rounded-full px-1.5 py-0.5 truncate" style={{ backgroundColor: e.colour }}>{e.time ? `${e.time} ` : ""}{e.title}</div>)}
                 </div>
               </button>
             );
@@ -263,26 +240,15 @@ export function CalendarClient({ anchor, view: initialView, workouts, plans, tas
             const dayWorkouts = showWorkouts ? (workoutsByDate[dateStr] ?? []) : [];
             const mealCount   = showMeals ? (plansByDate[dateStr] ?? 0) : 0;
             const dayTasks    = showTasks ? (tasksByDate[dateStr] ?? []) : [];
-
+            const dayEvents   = showEvents ? (eventsByDate[dateStr] ?? []) : [];
             return (
-              <button
-                key={dateStr}
-                onClick={() => openSheet(dateStr)}
-                className={`rounded-lg border p-1.5 min-h-[80px] text-left hover:border-[#0d9488] transition-colors ${
-                  isToday ? "border-[#0d9488] bg-[#0d9488]/5" : isThisMonth ? "bg-white" : "bg-gray-50"
-                }`}
-              >
-                <p className={`text-xs font-semibold mb-1 ${
-                  isToday ? "text-[#0d9488]" : isThisMonth ? "text-gray-700" : "text-gray-300"
-                }`}>
-                  {format(parseISO(dateStr), "d")}
-                </p>
+              <button key={dateStr} onClick={() => openSheet(dateStr)} className={`rounded-lg border p-1.5 min-h-[80px] text-left hover:border-[#0d9488] transition-colors ${isToday ? "border-[#0d9488] bg-[#0d9488]/5" : isThisMonth ? "bg-white" : "bg-gray-50"}`}>
+                <p className={`text-xs font-semibold mb-1 ${isToday ? "text-[#0d9488]" : isThisMonth ? "text-gray-700" : "text-gray-300"}`}>{format(parseISO(dateStr), "d")}</p>
                 <div className="space-y-0.5">
-                  {dayWorkouts.slice(0, 1).map((w) => (
-                    <div key={w.id} className={`w-2 h-2 rounded-full ${WORKOUT_COLORS[w.type] ?? "bg-gray-500"}`} title={w.type} />
-                  ))}
-                  {mealCount > 0 && <div className="w-2 h-2 rounded-full bg-teal-400" title={`${mealCount} meals`} />}
-                  {dayTasks.length > 0 && <div className="w-2 h-2 rounded-full bg-purple-400" title={`${dayTasks.length} tasks`} />}
+                  {dayWorkouts.slice(0, 1).map((w) => <div key={w.id} className={`w-2 h-2 rounded-full ${workoutDotColor(w.type)}`} title={w.type} />)}
+                  {mealCount > 0 && <div className="w-2 h-2 rounded-full bg-teal-400" />}
+                  {dayTasks.length > 0 && <div className="w-2 h-2 rounded-full bg-purple-400" />}
+                  {dayEvents.slice(0, 2).map((e) => <div key={e.id} className="w-2 h-2 rounded-full" style={{ backgroundColor: e.colour }} title={e.title} />)}
                 </div>
               </button>
             );
@@ -295,131 +261,125 @@ export function CalendarClient({ anchor, view: initialView, workouts, plans, tas
         <SheetContent side="right" className="w-[440px] max-w-full flex flex-col p-0">
           {sheetDate && (
             <div className="flex flex-col h-full overflow-hidden">
-              {/* Header — sits below the × button */}
               <SheetHeader className="px-6 pt-12 pb-4 border-b shrink-0">
-                <SheetTitle className="text-lg font-semibold text-gray-900">
-                  {format(parseISO(sheetDate), "EEEE, d MMMM")}
-                </SheetTitle>
+                <SheetTitle className="text-lg font-semibold text-gray-900">{format(parseISO(sheetDate), "EEEE, d MMMM")}</SheetTitle>
               </SheetHeader>
 
-              {/* Scrollable body */}
               <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
 
-              {/* Workouts */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Workouts</p>
-                  <button
-                    onClick={() => { setShowWorkoutForm(!showWorkoutForm); setShowTaskForm(false); }}
-                    className="text-sm text-[#0d9488] hover:underline flex items-center gap-1"
-                  >
-                    <Plus className="w-4 h-4" /> Log workout
-                  </button>
-                </div>
-
-                {showWorkoutForm && (
-                  <div className="mb-3 rounded-lg border bg-gray-50 p-3 space-y-2">
-                    <Select value={workoutType} onValueChange={(v) => { if (v) setWorkoutType(v); }}>
-                      <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {workoutTypes.map((t) => (
-                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Input
-                      type="number"
-                      placeholder="Duration (minutes, optional)"
-                      value={workoutDuration}
-                      onChange={(e) => setWorkoutDuration(e.target.value)}
-                      className="bg-white"
-                    />
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={handleLogWorkout} className="flex-1">Save</Button>
-                      <Button size="sm" variant="outline" onClick={() => setShowWorkoutForm(false)}>Cancel</Button>
+                {/* Events section */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Events</p>
+                    <button onClick={() => { setShowEventForm(!showEventForm); setShowTaskForm(false); setShowWorkoutForm(false); }} className="text-sm text-[#0d9488] hover:underline flex items-center gap-1">
+                      <Plus className="w-4 h-4" /> Add event
+                    </button>
+                  </div>
+                  {showEventForm && (
+                    <div className="mb-3 rounded-lg border bg-gray-50 p-3 space-y-2">
+                      <Input placeholder="e.g. Dinner with Sam, Doctor's appointment" value={eventTitle} onChange={(e) => setEventTitle(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleAddEvent(); }} autoFocus className="bg-white" />
+                      <div className="flex gap-2">
+                        <Select value={eventType} onValueChange={(v) => setEventType(v as typeof eventType)}>
+                          <SelectTrigger className="bg-white flex-1"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="social">🎉 Social</SelectItem>
+                            <SelectItem value="appointment">📅 Appointment</SelectItem>
+                            <SelectItem value="travel">✈️ Travel</SelectItem>
+                            <SelectItem value="other">📌 Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Input type="time" value={eventTime} onChange={(e) => setEventTime(e.target.value)} className="bg-white w-28" />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={handleAddEvent} disabled={!eventTitle.trim()} className="flex-1">Save</Button>
+                        <Button size="sm" variant="outline" onClick={() => setShowEventForm(false)}>Cancel</Button>
+                      </div>
                     </div>
-                  </div>
-                )}
-
-                {sheetWorkouts.length > 0 ? sheetWorkouts.map((w) => (
-                  <div key={w.id} className="flex items-center gap-2 py-2.5 border-b border-gray-100 last:border-0">
-                    <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${WORKOUT_COLORS[w.type] ?? "bg-gray-400"}`} />
-                    <span className="text-base capitalize text-gray-800">{w.type.replace("_", " ")}</span>
-                    {w.durationMinutes && <span className="text-sm text-gray-400 ml-auto">{w.durationMinutes} min</span>}
-                    {w.completed && <span className="text-xs bg-green-100 text-green-700 rounded-full px-2 py-0.5 ml-1">Done</span>}
-                  </div>
-                )) : (
-                  !showWorkoutForm && <p className="text-sm text-gray-300 py-1">None logged.</p>
-                )}
-                <Link href="/health/workouts" className="text-sm text-[#0d9488] hover:underline mt-2 block">
-                  View all workouts →
-                </Link>
-              </div>
-
-              {/* Meals */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Meals</p>
-                  <Link
-                    href={`/food/plan?week=${sheetDate}`}
-                    className="text-sm text-[#0d9488] hover:underline flex items-center gap-1"
-                  >
-                    <Plus className="w-4 h-4" /> Plan meals
-                  </Link>
-                </div>
-                {sheetPlans.length > 0 ? sheetPlans.map((p) => (
-                  <div key={p.id} className="flex items-center gap-2 py-2.5 border-b border-gray-100 last:border-0">
-                    <UtensilsCrossed className="w-4 h-4 text-teal-500 flex-shrink-0" />
-                    <span className="text-sm text-gray-400 capitalize w-20 flex-shrink-0">{p.mealSlot}</span>
-                    <span className="text-base text-gray-800">{p.meal?.name ?? "—"}</span>
-                  </div>
-                )) : (
-                  <p className="text-sm text-gray-300 py-1">Nothing planned.</p>
-                )}
-              </div>
-
-              {/* Tasks */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Tasks</p>
-                  <button
-                    onClick={() => { setShowTaskForm(!showTaskForm); setShowWorkoutForm(false); }}
-                    className="text-sm text-[#0d9488] hover:underline flex items-center gap-1"
-                  >
-                    <Plus className="w-4 h-4" /> Add task
-                  </button>
-                </div>
-
-                {showTaskForm && (
-                  <div className="mb-3 rounded-lg border bg-gray-50 p-3 space-y-2">
-                    <Input
-                      placeholder="Task title"
-                      value={taskTitle}
-                      onChange={(e) => setTaskTitle(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") handleAddTask(); }}
-                      className="bg-white"
-                      autoFocus
-                    />
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={handleAddTask} disabled={!taskTitle.trim()} className="flex-1">Save</Button>
-                      <Button size="sm" variant="outline" onClick={() => setShowTaskForm(false)}>Cancel</Button>
+                  )}
+                  {sheetEvents.length > 0 ? sheetEvents.map((e) => (
+                    <div key={e.id} className="flex items-center gap-2 py-2.5 border-b border-gray-100 last:border-0">
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: e.colour }} />
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-800">{e.title}</p>
+                        {e.time && <p className="text-xs text-gray-400">{e.time}</p>}
+                      </div>
+                      <span className="text-xs text-gray-400 capitalize">{e.type}</span>
+                      <button onClick={() => handleDeleteEvent(e.id)} className="text-gray-300 hover:text-red-400 ml-1"><Trash2 className="w-3.5 h-3.5" /></button>
                     </div>
-                  </div>
-                )}
+                  )) : (!showEventForm && <p className="text-sm text-gray-300 py-1">No events. Tap &quot;Add event&quot; to add a dinner, appointment, etc.</p>)}
+                </div>
 
-                {sheetTasks.length > 0 ? sheetTasks.map((t) => (
-                  <div key={t.id} className="flex items-center gap-2 py-2.5 border-b border-gray-100 last:border-0">
-                    <ListTodo className="w-4 h-4 text-purple-500 flex-shrink-0" />
-                    <span className={`text-base flex-1 ${t.status === "done" ? "line-through text-gray-400" : "text-gray-800"}`}>{t.title}</span>
+                {/* Workouts section */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Workouts</p>
+                    <button onClick={() => { setShowWorkoutForm(!showWorkoutForm); setShowTaskForm(false); setShowEventForm(false); }} className="text-sm text-[#0d9488] hover:underline flex items-center gap-1">
+                      <Plus className="w-4 h-4" /> Log workout
+                    </button>
                   </div>
-                )) : (
-                  !showTaskForm && <p className="text-sm text-gray-300 py-1">No tasks due.</p>
-                )}
-              </div>
+                  {showWorkoutForm && (
+                    <div className="mb-3 rounded-lg border bg-gray-50 p-3 space-y-2">
+                      <Select value={workoutType} onValueChange={(v) => { if (v) setWorkoutType(v); }}>
+                        <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                        <SelectContent>{workoutTypes.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+                      </Select>
+                      <Input type="number" placeholder="Duration (minutes, optional)" value={workoutDuration} onChange={(e) => setWorkoutDuration(e.target.value)} className="bg-white" />
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={handleLogWorkout} className="flex-1">Save</Button>
+                        <Button size="sm" variant="outline" onClick={() => setShowWorkoutForm(false)}>Cancel</Button>
+                      </div>
+                    </div>
+                  )}
+                  {sheetWorkouts.length > 0 ? sheetWorkouts.map((w) => (
+                    <div key={w.id} className="flex items-center gap-2 py-2.5 border-b border-gray-100 last:border-0">
+                      <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${workoutDotColor(w.type)}`} />
+                      <span className="text-sm text-gray-800 flex-1 capitalize">{workoutTypes.find((t) => t.value === w.type)?.label ?? w.type.replace(/_/g, " ")}</span>
+                      {w.durationMinutes && <span className="text-xs text-gray-400">{w.durationMinutes} min</span>}
+                      {w.completed && <span className="text-xs bg-green-100 text-green-700 rounded-full px-2 py-0.5">Done</span>}
+                    </div>
+                  )) : (!showWorkoutForm && <p className="text-sm text-gray-300 py-1">None logged.</p>)}
+                  <Link href="/health/workouts" className="text-sm text-[#0d9488] hover:underline mt-2 block">View workout plan →</Link>
+                </div>
 
-              {sheetWorkouts.length === 0 && sheetPlans.length === 0 && sheetTasks.length === 0 && !showTaskForm && !showWorkoutForm && (
-                <p className="text-base text-gray-400 pt-2">Nothing scheduled — use the buttons above to add something.</p>
-              )}
+                {/* Meals section */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Meals</p>
+                    <Link href={`/food/plan?week=${sheetDate}`} className="text-sm text-[#0d9488] hover:underline flex items-center gap-1"><Plus className="w-4 h-4" /> Plan meals</Link>
+                  </div>
+                  {sheetPlans.length > 0 ? sheetPlans.map((p) => (
+                    <div key={p.id} className="flex items-center gap-2 py-2.5 border-b border-gray-100 last:border-0">
+                      <UtensilsCrossed className="w-4 h-4 text-teal-500 flex-shrink-0" />
+                      <span className="text-xs text-gray-400 capitalize w-20 flex-shrink-0">{p.mealSlot}</span>
+                      <span className="text-sm text-gray-800">{p.meal?.name ?? "—"}</span>
+                    </div>
+                  )) : <p className="text-sm text-gray-300 py-1">Nothing planned.</p>}
+                </div>
+
+                {/* Tasks section */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Tasks</p>
+                    <button onClick={() => { setShowTaskForm(!showTaskForm); setShowWorkoutForm(false); setShowEventForm(false); }} className="text-sm text-[#0d9488] hover:underline flex items-center gap-1">
+                      <Plus className="w-4 h-4" /> Add task
+                    </button>
+                  </div>
+                  {showTaskForm && (
+                    <div className="mb-3 rounded-lg border bg-gray-50 p-3 space-y-2">
+                      <Input placeholder="Task title" value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleAddTask(); }} className="bg-white" autoFocus />
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={handleAddTask} disabled={!taskTitle.trim()} className="flex-1">Save</Button>
+                        <Button size="sm" variant="outline" onClick={() => setShowTaskForm(false)}>Cancel</Button>
+                      </div>
+                    </div>
+                  )}
+                  {sheetTasks.length > 0 ? sheetTasks.map((t) => (
+                    <div key={t.id} className="flex items-center gap-2 py-2.5 border-b border-gray-100 last:border-0">
+                      <ListTodo className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                      <span className={`text-sm flex-1 ${t.status === "done" ? "line-through text-gray-400" : "text-gray-800"}`}>{t.title}</span>
+                    </div>
+                  )) : (!showTaskForm && <p className="text-sm text-gray-300 py-1">No tasks due.</p>)}
+                </div>
 
               </div>
             </div>
@@ -432,12 +392,7 @@ export function CalendarClient({ anchor, view: initialView, workouts, plans, tas
 
 function ToggleChip({ active, onChange, color, label }: { active: boolean; onChange: (v: boolean) => void; color: string; label: string }) {
   return (
-    <button
-      onClick={() => onChange(!active)}
-      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
-        active ? "bg-gray-800 text-white border-gray-800" : "bg-white text-gray-500 border-gray-200 hover:border-gray-400"
-      }`}
-    >
+    <button onClick={() => onChange(!active)} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${active ? "bg-gray-800 text-white border-gray-800" : "bg-white text-gray-500 border-gray-200 hover:border-gray-400"}`}>
       <span className={`w-2 h-2 rounded-full ${active ? color : "bg-gray-300"}`} />
       {label}
     </button>

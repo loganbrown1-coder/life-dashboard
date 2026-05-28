@@ -50,6 +50,12 @@ export async function deleteAccount(id: string) {
   revalidateSettings();
 }
 
+export async function updateAccountBalance(id: string, newBalance: number) {
+  await db.update(accounts).set({ currentBalance: newBalance, updatedAt: now() }).where(eq(accounts.id, id));
+  revalidatePath("/finances");
+  revalidatePath("/");
+}
+
 // ── Budgets ───────────────────────────────────────────────────────────────────
 
 export async function upsertBudget(category: string, monthlyLimitGbp: number) {
