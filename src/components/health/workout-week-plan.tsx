@@ -171,10 +171,8 @@ function SetupScheduleDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-xs text-gray-500">
-          <Settings2 className="w-3.5 h-3.5" /> Edit plan
-        </Button>
+      <DialogTrigger className="inline-flex items-center gap-1.5 h-7 px-2 rounded text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+        <Settings2 className="w-3.5 h-3.5" /> Edit plan
       </DialogTrigger>
       <DialogContent className="max-w-sm">
         <DialogHeader>
