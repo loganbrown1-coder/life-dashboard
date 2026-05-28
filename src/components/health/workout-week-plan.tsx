@@ -189,7 +189,7 @@ function SetupScheduleDialog({
                 value={days[i] ?? ""}
                 onValueChange={(v) => {
                   const next = [...days];
-                  next[i] = v === "rest" ? "" : v;
+                  next[i] = !v || v === "rest" ? "" : v;
                   setDays(next);
                 }}
               >
