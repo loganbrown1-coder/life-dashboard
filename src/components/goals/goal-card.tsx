@@ -6,10 +6,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Resolver } from "react-hook-form";
 import { toast } from "sonner";
-import { MoreVertical, Pencil, Trash2, CheckSquare, Square } from "lucide-react";
+import { Pencil, Trash2, CheckSquare, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -123,19 +122,24 @@ export function GoalCard({ goal, savings, tasks = [], actionCount = 0 }: { goal:
             </span>
           )}
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger className="p-1 rounded hover:bg-gray-100">
-            <MoreVertical className="h-4 w-4 text-gray-400" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setEditOpen(true); }}>
-              <Pencil className="h-3.5 w-3.5 mr-2" /> Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleDelete(); }} className="text-red-600">
-              <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={() => setEditOpen(true)}
+            className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600"
+            title="Edit goal"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500"
+            title="Delete goal"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       <div>
