@@ -23,7 +23,7 @@ export default function LoginPage() {
 
     if (res.ok) {
       const from = searchParams.get("from") ?? "/";
-      router.push(from);
+      window.location.href = from; // hard redirect so the page fully reloads and "loading" clears
     } else {
       setError("Wrong password — try again.");
       setLoading(false);

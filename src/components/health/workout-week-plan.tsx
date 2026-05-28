@@ -77,91 +77,102 @@ export function WorkoutWeekPlan({ schedule, weekDates, completions, workoutTypes
       {!hasSchedule ? (
         <p className="text-sm text-gray-400">
           No plan yet.{" "}
-          <button
-            onClick={() => setEditOpen(true)}
-            className="text-[#0d9488] underline"
-          >
+          <button onClick={() => setEditOpen(true)} className="text-[#0d9488] underline">
             Set up your schedule →
           </button>
         </p>
       ) : (
-        <div className="overflow-x-auto -mx-1">
-          <table className="w-full text-center table-fixed min-w-[320px]">
-            <thead>
-              <tr>
-                {/* AM/PM label column */}
-                <th className="w-8" />
-                {weekDates.map((date, i) => {
-                  const isToday = date === today;
-                  const dateNum = parseInt(date.slice(8), 10);
-                  return (
-                    <th key={date} className="pb-2 px-0">
-                      <div className={`text-[10px] font-semibold uppercase tracking-wide
-                        ${isToday ? "text-[#0d9488]" : "text-gray-400"}`}>
-                        {DAY_NAMES[i]}
-                      </div>
-                      <div className={`text-sm font-bold
-                        ${isToday ? "text-[#0d9488]" : "text-gray-700"}`}>
-                        {dateNum}
-                      </div>
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {(["morning", "afternoon"] as Slot[]).map((slot) => (
-                <tr key={slot}>
-                  <td className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide pr-1 text-right">
-                    {slot === "morning" ? "AM" : "PM"}
-                  </td>
-                  {weekDates.map((date, i) => {
-                    const dayNum = i + 1;
-                    const workoutType = scheduleMap[`${dayNum}-${slot}`];
-                    const isDone = workoutType
-                      ? doneSet.has(`${date}-${workoutType}`)
-                      : false;
-                    const isPast = date < today;
-                    const isToday = date === today;
-                    const canToggle = (isPast || isToday) && !!workoutType;
-                    const label = workoutTypes.find((o) => o.value === workoutType)?.label ?? workoutType ?? "";
+        <div className="space-y-1.5">
+          {weekDates.map((date, i) => {
+            const dayNum   = i + 1;
+            const isToday  = date === today;
+            const isPast   = date < today;
+            const dateNum  = parseInt(date.slice(8), 10);
+            const amType   = scheduleMap[`${dayNum}-morning`];
+            const pmType   = scheduleMap[`${dayNum}-afternoon`];
 
-                    return (
-                      <td key={date} className="py-1 px-0.5">
-                        {workoutType ? (
-                          <button
-                            onClick={() => canToggle && handleToggle(date, workoutType)}
-                            disabled={!canToggle}
-                            title={`${label}${isDone ? " ✓" : ""}`}
-                            className={`w-9 h-9 rounded-lg flex items-center justify-center mx-auto transition-all
-                              ${isDone
-                                ? "bg-[#0d9488] text-white shadow-sm"
-                                : canToggle
-                                  ? `${workoutBadgeColor(workoutType)} hover:opacity-90 active:scale-95`
-                                  : "bg-gray-100 text-gray-300 cursor-default"
-                              }`}
-                          >
-                            {isDone ? (
-                              <Check className="w-4 h-4" />
-                            ) : (
-                              <span className="text-[9px] font-bold uppercase leading-none px-0.5">
-                                {label.slice(0, 3)}
-                              </span>
-                            )}
-                          </button>
-                        ) : (
-                          <div className="w-9 h-9 rounded-lg bg-gray-50 mx-auto" />
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+            return (
+              <div
+                key={date}
+                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors
+                  ${isToday ? "bg-teal-50 ring-1 ring-teal-200" : "bg-gray-50/60"}`}
+              >
+                {/* Day label */}
+                <div className="w-12 shrink-0">
+                  <p className={`text-[11px] font-semibold uppercase tracking-wide
+                    ${isToday ? "text-[#0d9488]" : "text-gray-400"}`}>
+                    {DAY_NAMES[i]}
+                  </p>
+                  <p className={`text-base font-bold leading-none mt-0.5
+                    ${isToday ? "text-[#0d9488]" : isPast ? "text-gray-400" : "text-gray-700"}`}>
+                    {dateNum}
+                  </p>
+                </div>
+
+                {/* AM slot */}
+                <SlotPill
+                  workoutType={amType}
+                  label={workoutTypes.find((o) => o.value === amType)?.label ?? amType ?? ""}
+                  slotLabel="AM"
+                  isDone={amType ? doneSet.has(`${date}-${amType}`) : false}
+                  canToggle={(isToday || isPast) && !!amType}
+                  onToggle={() => amType && handleToggle(date, amType)}
+                />
+
+                {/* PM slot */}
+                <SlotPill
+                  workoutType={pmType}
+                  label={workoutTypes.find((o) => o.value === pmType)?.label ?? pmType ?? ""}
+                  slotLabel="PM"
+                  isDone={pmType ? doneSet.has(`${date}-${pmType}`) : false}
+                  canToggle={(isToday || isPast) && !!pmType}
+                  onToggle={() => pmType && handleToggle(date, pmType)}
+                />
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
+  );
+}
+
+// ── Slot pill ─────────────────────────────────────────────────────────────────
+
+function SlotPill({
+  workoutType, label, slotLabel, isDone, canToggle, onToggle,
+}: {
+  workoutType?: string;
+  label: string;
+  slotLabel: string;
+  isDone: boolean;
+  canToggle: boolean;
+  onToggle: () => void;
+}) {
+  if (!workoutType) {
+    return (
+      <div className="flex-1 flex items-center gap-1.5 rounded-lg bg-white border border-dashed border-gray-200 px-2.5 py-1.5 h-9">
+        <span className="text-[10px] font-semibold text-gray-300 uppercase">{slotLabel}</span>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={canToggle ? onToggle : undefined}
+      disabled={!canToggle}
+      className={`flex-1 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 h-9 text-left transition-all
+        ${isDone
+          ? "bg-[#0d9488] text-white shadow-sm"
+          : canToggle
+            ? `${workoutBadgeColor(workoutType)} hover:opacity-90 active:scale-[0.98]`
+            : "bg-gray-100 text-gray-400 cursor-default opacity-60"
+        }`}
+    >
+      <span className="text-[10px] font-semibold uppercase opacity-70 shrink-0">{slotLabel}</span>
+      <span className="text-xs font-semibold truncate flex-1">{label}</span>
+      {isDone && <Check className="w-3.5 h-3.5 shrink-0" />}
+    </button>
   );
 }
 
