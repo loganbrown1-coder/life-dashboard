@@ -13,6 +13,8 @@ type Bill         = { id: string; name: string; amount: number; nextDueDate: str
 type SavingsGoal  = { id: string; name: string; targetAmountGbp: number; currentAmountGbp: number; targetDate?: string | null };
 type Rate         = { currencyCode: string; rateToGbp: number };
 type Totals       = { income: number; expenses: number; net: number };
+type Budget       = { id: string; category: string; monthlyLimitGbp: number };
+type CategorySpend = { category: string; total: number };
 
 type Props = {
   accounts:     Account[];
@@ -22,9 +24,11 @@ type Props = {
   savingsGoals: SavingsGoal[];
   rates:        Rate[];
   categories:   string[];
+  budgets:      Budget[];
+  categorySpend: CategorySpend[];
 };
 
-export function FinancesOverviewClient({ accounts, recent, totals, upcomingBills, savingsGoals }: Props) {
+export function FinancesOverviewClient({ accounts, recent, totals, upcomingBills, savingsGoals, budgets, categorySpend }: Props) {
   return (
     <div className="space-y-5">
       {/* Month summary row */}
@@ -50,6 +54,9 @@ export function FinancesOverviewClient({ accounts, recent, totals, upcomingBills
 
       {/* Account balances — tap to update */}
       <AccountBalancesCard accounts={accounts} />
+
+      {/* Budget progress bars */}
+      {budgets.length > 0 && <BudgetBarsCard budgets={budgets} categorySpend={categorySpend} />}
 
       {/* Savings pots */}
       {savingsGoals.length > 0 && <SavingsPotsCard goals={savingsGoals} />}
@@ -222,6 +229,56 @@ function SavingsPotsCard({ goals }: { goals: SavingsGoal[] }) {
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+// ── Budget bars ───────────────────────────────────────────────────────────────
+
+function BudgetBarsCard({ budgets, categorySpend }: { budgets: Budget[]; categorySpend: CategorySpend[] }) {
+  const spendMap = Object.fromEntries(categorySpend.map((c) => [c.category.toLowerCase(), c.total]));
+
+  const rows = budgets
+    .map((b) => {
+      const spent = spendMap[b.category.toLowerCase()] ?? 0;
+      const pct = b.monthlyLimitGbp > 0 ? Math.min(100, Math.round((spent / b.monthlyLimitGbp) * 100)) : 0;
+      return { ...b, spent, pct };
+    })
+    .sort((a, b) => b.pct - a.pct);
+
+  return (
+    <div className="rounded-xl border bg-white shadow-sm p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-semibold text-gray-800">Budget this month</h2>
+        <Link href="/finances/budgets" className="text-xs text-[#0d9488] hover:underline">Manage →</Link>
+      </div>
+      <div className="space-y-3">
+        {rows.map((row) => (
+          <div key={row.id}>
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-xs font-medium text-gray-700">{row.category}</p>
+              <p className="text-xs tabular-nums text-gray-500">
+                £{row.spent.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                <span className="text-gray-300"> / £{row.monthlyLimitGbp.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+              </p>
+            </div>
+            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${row.pct}%`,
+                  backgroundColor: row.pct >= 100 ? "#ef4444" : row.pct >= 80 ? "#f59e0b" : "#0d9488",
+                }}
+              />
+            </div>
+            {row.pct >= 80 && (
+              <p className={`text-[10px] mt-0.5 font-medium ${row.pct >= 100 ? "text-red-500" : "text-amber-500"}`}>
+                {row.pct >= 100 ? "Over budget!" : `${row.pct}% used`}
+              </p>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );

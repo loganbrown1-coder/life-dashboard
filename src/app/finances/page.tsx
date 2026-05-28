@@ -4,6 +4,7 @@ import { FinancesOverviewClient } from "@/components/finances/finances-overview-
 import {
   getAccounts, getRecentTransactions, getMonthTotals,
   getUpcomingBills, getSavingsGoals, getCurrencyRates,
+  getBudgets, getSpendingByCategory,
 } from "@/db/queries/finances";
 import { getUserOptions } from "@/db/queries/user-options";
 import { format } from "date-fns";
@@ -15,7 +16,7 @@ export default async function FinancesOverviewPage() {
   const year  = now.getFullYear();
   const month = now.getMonth() + 1;
 
-  const [accounts, recent, totals, upcomingBills, savingsGoals, rates, categoryOptions] =
+  const [accounts, recent, totals, upcomingBills, savingsGoals, rates, categoryOptions, budgets, categorySpend] =
     await Promise.all([
       getAccounts(),
       getRecentTransactions(5),
@@ -24,6 +25,8 @@ export default async function FinancesOverviewPage() {
       getSavingsGoals(),
       getCurrencyRates(),
       getUserOptions("transaction_category"),
+      getBudgets(),
+      getSpendingByCategory(year, month),
     ]);
 
   const categories = categoryOptions.map((o) => o.label);
@@ -57,6 +60,8 @@ export default async function FinancesOverviewPage() {
         savingsGoals={savingsGoals}
         rates={rates}
         categories={categories}
+        budgets={budgets}
+        categorySpend={categorySpend}
       />
     </div>
   );

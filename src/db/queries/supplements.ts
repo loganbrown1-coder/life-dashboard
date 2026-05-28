@@ -43,6 +43,17 @@ export async function isTakenToday(supplementId: string): Promise<boolean> {
   return !!row;
 }
 
+export async function getActiveSupplementsWithTodayStatus() {
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const [allSupps, logs] = await Promise.all([
+    db.select().from(supplements).where(eq(supplements.active, true)).orderBy(supplements.name),
+    db.select().from(supplementLogs).where(gte(supplementLogs.takenAt, todayStart)),
+  ]);
+  const takenIds = new Set(logs.map((l) => l.supplementId));
+  return allSupps.map((s) => ({ ...s, takenToday: takenIds.has(s.id) }));
+}
+
 // Adherence % for the last 7 days: taken / (active supplements × 7)
 export async function getWeeklyAdherence(): Promise<number> {
   const activeList = await getActiveSupplements();

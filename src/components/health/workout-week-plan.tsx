@@ -13,6 +13,9 @@ import {
   useSensor,
   useSensors,
   PointerSensor,
+  TouchSensor,
+  MeasuringStrategy,
+  rectIntersection,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
@@ -186,10 +189,9 @@ function SetupScheduleDialog({
 
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  // PointerSensor handles both mouse and touch; distance:8 prevents
-  // accidental drags on tap, and lets click events still fire on the chips.
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
   );
 
   function handleDragStart({ active }: DragStartEvent) {
@@ -235,17 +237,23 @@ function SetupScheduleDialog({
     : null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger className="inline-flex items-center gap-1.5 h-7 px-2 rounded text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors">
-        <Settings2 className="w-3.5 h-3.5" /> Edit plan
-      </DialogTrigger>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={rectIntersection}
+      measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogTrigger className="inline-flex items-center gap-1.5 h-7 px-2 rounded text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+          <Settings2 className="w-3.5 h-3.5" /> Edit plan
+        </DialogTrigger>
 
-      <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto overflow-x-hidden">
-        <DialogHeader>
-          <DialogTitle>Weekly workout plan</DialogTitle>
-        </DialogHeader>
+        <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto overflow-x-hidden">
+          <DialogHeader>
+            <DialogTitle>Weekly workout plan</DialogTitle>
+          </DialogHeader>
 
-        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           {/* Palette — drag from here */}
           <div className="mb-5">
             <p className="text-xs text-gray-400 mb-2">Drag into a slot:</p>
@@ -299,29 +307,29 @@ function SetupScheduleDialog({
             })}
           </div>
 
-          {/* Drag ghost — restricted to window edges so it can't push the page wider */}
-          <DragOverlay dropAnimation={null} modifiers={[restrictToWindowEdges]}>
-            {activeId && activeLabel && (
-              <div
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold shadow-lg pointer-events-none select-none ${workoutBadgeColor(activeId)}`}
-              >
-                {activeLabel}
-              </div>
-            )}
-          </DragOverlay>
-        </DndContext>
+          <Button
+            onClick={handleSave}
+            className="w-full mt-5 bg-[#0d9488] hover:bg-teal-700"
+          >
+            Save schedule
+          </Button>
+          <p className="text-[10px] text-center text-gray-400 -mt-2">
+            This plan repeats every week
+          </p>
+        </DialogContent>
+      </Dialog>
 
-        <Button
-          onClick={handleSave}
-          className="w-full mt-5 bg-[#0d9488] hover:bg-teal-700"
-        >
-          Save schedule
-        </Button>
-        <p className="text-[10px] text-center text-gray-400 -mt-2">
-          This plan repeats every week
-        </p>
-      </DialogContent>
-    </Dialog>
+      {/* DragOverlay is OUTSIDE the Dialog to avoid portal/transform issues */}
+      <DragOverlay dropAnimation={null} modifiers={[restrictToWindowEdges]}>
+        {activeId && activeLabel && (
+          <div
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold shadow-lg pointer-events-none select-none ${workoutBadgeColor(activeId)}`}
+          >
+            {activeLabel}
+          </div>
+        )}
+      </DragOverlay>
+    </DndContext>
   );
 }
 

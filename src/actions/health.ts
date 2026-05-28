@@ -228,6 +228,7 @@ export async function takeSupplement(supplementId: string) {
     supplementId,
     takenAt: now(),
   });
+  revalidatePath("/");
   revalidatePath("/health");
   revalidatePath("/health/supplements");
 }

@@ -13,6 +13,8 @@ import { getTodaySteps, getLast30DaysSteps } from "@/db/queries/steps";
 import { getSavingsGoals, getTransactionsForRange } from "@/db/queries/finances";
 import { getSleepLogsForRange } from "@/db/queries/sleep";
 import { getCheckInForDate } from "@/db/queries/check-in";
+import { getActiveSupplementsWithTodayStatus } from "@/db/queries/supplements";
+import { SupplementChecklist } from "@/components/home/supplement-checklist";
 import { completeTask } from "@/actions/tasks";
 import { db } from "@/db";
 import { accounts } from "@/db/schema";
@@ -55,6 +57,7 @@ export default async function HomePage() {
     weekSleepLogs,
     weekTxns,
     weekTasksDone,
+    supplementsWithStatus,
   ] = await Promise.all([
     getRoutinesWithItems(),
     getRoutineLogsForDate(today),
@@ -70,6 +73,7 @@ export default async function HomePage() {
     getSleepLogsForRange(weekStart, weekEnd),
     getTransactionsForRange(weekStart, weekEnd),
     getTasksCompletedInRange(weekStart, weekEnd),
+    getActiveSupplementsWithTodayStatus(),
   ]);
 
   const morningRoutine = routinesWithItems.find((r) => r.timeOfDay === "morning");
@@ -140,6 +144,9 @@ export default async function HomePage() {
               collapsedByDefault={pastNoon}
             />
           )}
+
+          {/* Supplement checklist */}
+          <SupplementChecklist supplements={supplementsWithStatus} />
 
           {/* Today's meals */}
           <div className="rounded-xl border bg-white p-4">
