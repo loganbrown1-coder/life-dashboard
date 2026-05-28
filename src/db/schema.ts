@@ -366,6 +366,7 @@ export const workoutSchedule = sqliteTable("workout_schedule", {
   ...baseColumns,
   dayOfWeek: integer("day_of_week").notNull(), // 1–7
   workoutType: text("workout_type").notNull(),  // matches user_options value
+  slot: text("slot", { enum: ["morning", "afternoon"] }).notNull().default("morning"),
   active: integer("active", { mode: "boolean" }).notNull().default(true),
 });
 
