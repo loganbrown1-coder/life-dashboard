@@ -10,9 +10,13 @@ import {
   DragOverlay,
   useDraggable,
   useDroppable,
+  useSensor,
+  useSensors,
+  PointerSensor,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
+import { restrictToWindowEdges } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
@@ -182,6 +186,12 @@ function SetupScheduleDialog({
 
   const [activeId, setActiveId] = useState<string | null>(null);
 
+  // PointerSensor handles both mouse and touch; distance:8 prevents
+  // accidental drags on tap, and lets click events still fire on the chips.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
+
   function handleDragStart({ active }: DragStartEvent) {
     setActiveId(active.id as string);
   }
@@ -230,12 +240,12 @@ function SetupScheduleDialog({
         <Settings2 className="w-3.5 h-3.5" /> Edit plan
       </DialogTrigger>
 
-      <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>Weekly workout plan</DialogTitle>
         </DialogHeader>
 
-        <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           {/* Palette — drag from here */}
           <div className="mb-5">
             <p className="text-xs text-gray-400 mb-2">Drag into a slot:</p>
@@ -289,11 +299,11 @@ function SetupScheduleDialog({
             })}
           </div>
 
-          {/* Drag ghost */}
-          <DragOverlay dropAnimation={null}>
+          {/* Drag ghost — restricted to window edges so it can't push the page wider */}
+          <DragOverlay dropAnimation={null} modifiers={[restrictToWindowEdges]}>
             {activeId && activeLabel && (
               <div
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold shadow-lg pointer-events-none ${workoutBadgeColor(activeId)}`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold shadow-lg pointer-events-none select-none ${workoutBadgeColor(activeId)}`}
               >
                 {activeLabel}
               </div>
