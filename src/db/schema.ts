@@ -384,6 +384,7 @@ export const calendarEvents = sqliteTable("calendar_events", {
   notes: text("notes"),
   time: text("time"),             // HH:MM, optional
   colour: text("colour").notNull().default("#6366f1"),
+  goalId: text("goal_id"),        // optional link to a goal
 });
 
 // ---------------------------------------------------------------------------

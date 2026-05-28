@@ -4,6 +4,8 @@ import { getMealPlansWithMeals } from "@/db/queries/food";
 import { getTasksDueInRange } from "@/db/queries/tasks";
 import { getUserOptions } from "@/db/queries/user-options";
 import { getCalendarEventsForRange } from "@/db/queries/calendar-events";
+import { getWorkoutSchedule } from "@/db/queries/workout-schedule";
+import { getActiveGoals } from "@/db/queries/goals";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 
 function getAnchor(anchorParam?: string): string {
@@ -39,16 +41,18 @@ export default async function CalendarPage({
     rangeEnd   = format(gridEnd,   "yyyy-MM-dd");
   }
 
-  const [workouts, plans, taskRows, workoutTypeOptions, events] = await Promise.all([
+  const [workouts, plans, taskRows, workoutTypeOptions, events, schedule, goalList] = await Promise.all([
     getWorkoutsThisWeek(rangeStart, rangeEnd),
     getMealPlansWithMeals(rangeStart, rangeEnd),
     getTasksDueInRange(rangeStart, rangeEnd),
     getUserOptions("workout_type"),
     getCalendarEventsForRange(rangeStart, rangeEnd),
+    getWorkoutSchedule(),
+    getActiveGoals(),
   ]);
 
   return (
-    <div>
+    <div className="max-w-none">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-gray-900">Calendar</h1>
         <p className="text-gray-500 mt-1">Your workouts, meals, tasks and events</p>
@@ -66,6 +70,8 @@ export default async function CalendarPage({
         showTasks={true}
         showEvents={true}
         workoutTypes={workoutTypeOptions}
+        schedule={schedule}
+        goals={goalList.map((g) => ({ id: g.id, title: g.title }))}
       />
     </div>
   );

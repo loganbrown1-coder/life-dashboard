@@ -81,7 +81,13 @@
       "Bash(git commit -m ' *)",
       "Bash(gh auth *)",
       "Bash(git remote *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(npx vercel *)",
+      "Bash(echo \"Deploy started in background - PID $!\")",
+      "Bash(node scripts/add-slot-column.mjs)",
+      "Bash(git commit -m 'Redesign workout weekly view + fix login loading stuck *)",
+      "Bash(git commit -m 'Show workout plan on home + health pages; coloured future slots + tick button *)",
+      "Bash(node scripts/add-goal-id-to-events.mjs)"
     ]
   }
 }

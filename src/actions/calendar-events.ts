@@ -14,6 +14,7 @@ const schema = z.object({
   notes:  z.string().optional(),
   time:   z.string().optional(),
   colour: z.string().optional(),
+  goalId: z.string().optional(),
 });
 
 export async function addCalendarEvent(data: z.infer<typeof schema>) {
@@ -27,10 +28,12 @@ export async function addCalendarEvent(data: z.infer<typeof schema>) {
     notes:     parsed.notes ?? null,
     time:      parsed.time ?? null,
     colour:    parsed.colour ?? "#6366f1",
+    goalId:    parsed.goalId ?? null,
     createdAt: now,
     updatedAt: now,
   });
   revalidatePath("/calendar");
+  revalidatePath("/goals");
 }
 
 export async function deleteCalendarEvent(id: string) {

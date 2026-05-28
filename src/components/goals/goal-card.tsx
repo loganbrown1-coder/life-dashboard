@@ -62,7 +62,7 @@ const editSchema = z.object({
 });
 type EditForm = z.infer<typeof editSchema>;
 
-export function GoalCard({ goal, savings, tasks = [] }: { goal: Goal; savings?: SavingsGoal; tasks?: Task[] }) {
+export function GoalCard({ goal, savings, tasks = [], actionCount = 0 }: { goal: Goal; savings?: SavingsGoal; tasks?: Task[]; actionCount?: number }) {
   const [editOpen, setEditOpen] = useState(false);
   const [progressInput, setProgressInput] = useState(String(goal.progressPct));
 
@@ -117,6 +117,11 @@ export function GoalCard({ goal, savings, tasks = [] }: { goal: Goal; savings?: 
           </span>
           <h3 className="font-semibold text-sm leading-snug">{goal.title}</h3>
           {goal.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{goal.description}</p>}
+          {actionCount > 0 && (
+            <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium mt-1 inline-block">
+              {actionCount} action{actionCount === 1 ? "" : "s"}
+            </span>
+          )}
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger className="p-1 rounded hover:bg-gray-100">

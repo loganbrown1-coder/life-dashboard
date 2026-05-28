@@ -1,5 +1,6 @@
 import { getGoals, getActiveHabits, getHabitLogsForRange } from "@/db/queries/goals";
 import { getAllTasksWithGoalId } from "@/db/queries/tasks";
+import { getEventCountByGoal } from "@/db/queries/calendar-events";
 import { db } from "@/db";
 import { savingsGoals } from "@/db/schema";
 import { inArray } from "drizzle-orm";
@@ -12,11 +13,12 @@ export default async function GoalsPage() {
   const today = format(new Date(), "yyyy-MM-dd");
   const ninetyDaysAgo = format(subDays(new Date(), 89), "yyyy-MM-dd");
 
-  const [allGoals, habits, logs, allTasks] = await Promise.all([
+  const [allGoals, habits, logs, allTasks, actionCounts] = await Promise.all([
     getGoals(),
     getActiveHabits(),
     getHabitLogsForRange(ninetyDaysAgo, today),
     getAllTasksWithGoalId(),
+    getEventCountByGoal(),
   ]);
 
   const savingsIds = allGoals
@@ -55,6 +57,7 @@ export default async function GoalsPage() {
                 goal={goal}
                 savings={goal.linkedSavingsGoalId ? savingsMap.get(goal.linkedSavingsGoalId) : undefined}
                 tasks={allTasks.filter((t) => t.goalId === goal.id)}
+                actionCount={actionCounts[goal.id] ?? 0}
               />
             ))}
           </div>
@@ -71,6 +74,7 @@ export default async function GoalsPage() {
                 goal={goal}
                 savings={goal.linkedSavingsGoalId ? savingsMap.get(goal.linkedSavingsGoalId) : undefined}
                 tasks={allTasks.filter((t) => t.goalId === goal.id)}
+                actionCount={actionCounts[goal.id] ?? 0}
               />
             ))}
           </div>
@@ -82,7 +86,7 @@ export default async function GoalsPage() {
           <h2 className="text-lg font-semibold mb-3 text-gray-400">Completed</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 opacity-50">
             {done.map((goal) => (
-              <GoalCard key={goal.id} goal={goal} tasks={allTasks.filter((t) => t.goalId === goal.id)} />
+              <GoalCard key={goal.id} goal={goal} tasks={allTasks.filter((t) => t.goalId === goal.id)} actionCount={actionCounts[goal.id] ?? 0} />
             ))}
           </div>
         </section>
@@ -93,7 +97,7 @@ export default async function GoalsPage() {
           <h2 className="text-lg font-semibold mb-3 text-gray-300">Abandoned</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 opacity-40">
             {abandoned.map((goal) => (
-              <GoalCard key={goal.id} goal={goal} tasks={allTasks.filter((t) => t.goalId === goal.id)} />
+              <GoalCard key={goal.id} goal={goal} tasks={allTasks.filter((t) => t.goalId === goal.id)} actionCount={actionCounts[goal.id] ?? 0} />
             ))}
           </div>
         </section>

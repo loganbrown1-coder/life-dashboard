@@ -19,6 +19,8 @@ import { logWorkout } from "@/actions/health";
 import { addCalendarEvent, deleteCalendarEvent } from "@/actions/calendar-events";
 import { workoutDotColor } from "@/lib/workout-colors";
 
+type ScheduleEntry = { dayOfWeek: number; workoutType: string; slot: string };
+
 type WorkoutRow = {
   id: string; date: string; type: string; durationMinutes?: number | null; completed: boolean;
 };
@@ -46,6 +48,8 @@ type Props = {
   showTasks:    boolean;
   showEvents:   boolean;
   workoutTypes: CalendarWorkoutType[];
+  schedule:     ScheduleEntry[];
+  goals:        { id: string; title: string }[];
 };
 
 const EVENT_TYPE_COLOURS: Record<string, string> = {
@@ -59,7 +63,7 @@ export function CalendarClient({
   anchor, view: initialView,
   workouts, plans, tasks, events,
   showWorkouts: sw, showMeals: sm, showTasks: st, showEvents: se,
-  workoutTypes,
+  workoutTypes, schedule, goals,
 }: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -80,6 +84,7 @@ export function CalendarClient({
   const [eventTitle, setEventTitle]           = useState("");
   const [eventType, setEventType]             = useState<"social"|"appointment"|"travel"|"other">("social");
   const [eventTime, setEventTime]             = useState("");
+  const [eventGoalId, setEventGoalId]         = useState("");
 
   const anchorDate = parseISO(anchor);
   const today = format(new Date(), "yyyy-MM-dd");
@@ -129,6 +134,16 @@ export function CalendarClient({
     eventsByDate[e.date].push(e);
   }
 
+  // For each day in the range, add schedule entries that haven't been logged yet
+  const plannedByDate: Record<string, ScheduleEntry[]> = {};
+  for (const dateStr of days) {
+    const dow = new Date(dateStr + "T00:00:00").getDay(); // 0=Sun
+    const dayNum = dow === 0 ? 7 : dow; // convert to 1=Mon..7=Sun
+    const entries = schedule.filter((s) => s.dayOfWeek === dayNum);
+    const loggedTypes = new Set((workoutsByDate[dateStr] ?? []).map((w) => w.type));
+    plannedByDate[dateStr] = entries.filter((s) => !loggedTypes.has(s.workoutType));
+  }
+
   const sheetWorkouts = sheetDate ? (workoutsByDate[sheetDate] ?? []) : [];
   const sheetPlans    = sheetDate ? plans.filter((p) => p.date === sheetDate) : [];
   const sheetTasks    = sheetDate ? (tasksByDate[sheetDate] ?? []) : [];
@@ -165,8 +180,8 @@ export function CalendarClient({
   function handleAddEvent() {
     if (!eventTitle.trim() || !sheetDate) return;
     startTransition(async () => {
-      await addCalendarEvent({ date: sheetDate, title: eventTitle.trim(), type: eventType, time: eventTime || undefined, colour: EVENT_TYPE_COLOURS[eventType] ?? "#6366f1" });
-      setEventTitle(""); setEventTime(""); setShowEventForm(false); router.refresh();
+      await addCalendarEvent({ date: sheetDate, title: eventTitle.trim(), type: eventType, time: eventTime || undefined, colour: EVENT_TYPE_COLOURS[eventType] ?? "#6366f1", goalId: eventGoalId || undefined });
+      setEventTitle(""); setEventTime(""); setEventGoalId(""); setShowEventForm(false); router.refresh();
     });
   }
 
@@ -223,6 +238,11 @@ export function CalendarClient({
                       {workoutTypes.find((t) => t.value === w.type)?.label ?? w.type.replace(/_/g, " ")}
                     </div>
                   ))}
+                  {(showWorkouts ? (plannedByDate[dateStr] ?? []) : []).map((s) => (
+                    <div key={`plan-${s.slot}-${s.workoutType}`} className={`text-[10px] rounded-full px-1.5 py-0.5 capitalize truncate opacity-60 border ${workoutDotColor(s.workoutType)} bg-white`} style={{ color: "inherit" }}>
+                      {workoutTypes.find((t) => t.value === s.workoutType)?.label ?? s.workoutType}
+                    </div>
+                  ))}
                   {mealCount > 0 && <div className="text-[10px] text-teal-700 bg-teal-50 rounded-full px-1.5 py-0.5 flex items-center gap-0.5"><UtensilsCrossed className="w-2.5 h-2.5" /> {mealCount}/4</div>}
                   {dayTasks.map((t) => <div key={t.id} className="text-[10px] text-purple-700 bg-purple-50 rounded-full px-1.5 py-0.5 truncate">{t.title}</div>)}
                   {dayEvents.map((e) => <div key={e.id} className="text-[10px] text-white rounded-full px-1.5 py-0.5 truncate" style={{ backgroundColor: e.colour }}>{e.time ? `${e.time} ` : ""}{e.title}</div>)}
@@ -246,6 +266,9 @@ export function CalendarClient({
                 <p className={`text-xs font-semibold mb-1 ${isToday ? "text-[#0d9488]" : isThisMonth ? "text-gray-700" : "text-gray-300"}`}>{format(parseISO(dateStr), "d")}</p>
                 <div className="space-y-0.5">
                   {dayWorkouts.slice(0, 1).map((w) => <div key={w.id} className={`w-2 h-2 rounded-full ${workoutDotColor(w.type)}`} title={w.type} />)}
+                  {(showWorkouts ? (plannedByDate[dateStr] ?? []) : []).map((s) => (
+                    <div key={`plan-${s.slot}`} className={`w-2 h-2 rounded-full opacity-40 ${workoutDotColor(s.workoutType)}`} />
+                  ))}
                   {mealCount > 0 && <div className="w-2 h-2 rounded-full bg-teal-400" />}
                   {dayTasks.length > 0 && <div className="w-2 h-2 rounded-full bg-purple-400" />}
                   {dayEvents.slice(0, 2).map((e) => <div key={e.id} className="w-2 h-2 rounded-full" style={{ backgroundColor: e.colour }} title={e.title} />)}
@@ -290,6 +313,17 @@ export function CalendarClient({
                         </Select>
                         <Input type="time" value={eventTime} onChange={(e) => setEventTime(e.target.value)} className="bg-white w-28" />
                       </div>
+                      <Select value={eventGoalId} onValueChange={(v) => setEventGoalId(v ?? "")}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Link to goal (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">No goal</SelectItem>
+                          {goals.map((g) => (
+                            <SelectItem key={g.id} value={g.id}>{g.title}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <div className="flex gap-2">
                         <Button size="sm" onClick={handleAddEvent} disabled={!eventTitle.trim()} className="flex-1">Save</Button>
                         <Button size="sm" variant="outline" onClick={() => setShowEventForm(false)}>Cancel</Button>
