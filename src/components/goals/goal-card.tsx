@@ -128,10 +128,10 @@ export function GoalCard({ goal, savings, tasks = [], actionCount = 0 }: { goal:
             <MoreVertical className="h-4 w-4 text-gray-400" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setEditOpen(true); }}>
               <Pencil className="h-3.5 w-3.5 mr-2" /> Edit
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={handleDelete} className="text-red-600">
+            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleDelete(); }} className="text-red-600">
               <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
