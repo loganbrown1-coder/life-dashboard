@@ -87,7 +87,11 @@
       "Bash(node scripts/add-slot-column.mjs)",
       "Bash(git commit -m 'Redesign workout weekly view + fix login loading stuck *)",
       "Bash(git commit -m 'Show workout plan on home + health pages; coloured future slots + tick button *)",
-      "Bash(node scripts/add-goal-id-to-events.mjs)"
+      "Bash(node scripts/add-goal-id-to-events.mjs)",
+      "Bash(git commit -m 'Fix goal edit/delete dropdown not working *)",
+      "Bash(git commit -m 'Replace goal dropdown menu with direct edit/delete buttons *)",
+      "Bash(node scripts/add-goal-steps-table.mjs)",
+      "Bash(git commit -m 'Add goal steps — checklist + calendar linking per goal *)"
     ]
   }
 }

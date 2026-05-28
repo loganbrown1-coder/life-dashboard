@@ -288,6 +288,15 @@ export const goals = sqliteTable("goals", {
   }),
 });
 
+export const goalSteps = sqliteTable("goal_steps", {
+  ...baseColumns,
+  goalId: text("goal_id").notNull().references(() => goals.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  done: integer("done", { mode: "boolean" }).notNull().default(false),
+  dueDate: text("due_date"), // YYYY-MM-DD, nullable
+  position: integer("position").notNull().default(0),
+});
+
 export const projects = sqliteTable("projects", {
   ...baseColumns,
   title: text("title").notNull(),

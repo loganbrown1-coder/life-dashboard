@@ -6,7 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Resolver } from "react-hook-form";
 import { toast } from "sonner";
-import { Pencil, Trash2, CheckSquare, Square } from "lucide-react";
+import Link from "next/link";
+import { Pencil, Trash2, CheckSquare, Square, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -61,7 +62,7 @@ const editSchema = z.object({
 });
 type EditForm = z.infer<typeof editSchema>;
 
-export function GoalCard({ goal, savings, tasks = [], actionCount = 0 }: { goal: Goal; savings?: SavingsGoal; tasks?: Task[]; actionCount?: number }) {
+export function GoalCard({ goal, savings, tasks = [], actionCount = 0, stepCount }: { goal: Goal; savings?: SavingsGoal; tasks?: Task[]; actionCount?: number; stepCount?: { total: number; done: number } }) {
   const [editOpen, setEditOpen] = useState(false);
   const [progressInput, setProgressInput] = useState(String(goal.progressPct));
 
@@ -114,13 +115,22 @@ export function GoalCard({ goal, savings, tasks = [], actionCount = 0 }: { goal:
           <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium mb-1 ${catClass}`}>
             {goal.category}
           </span>
-          <h3 className="font-semibold text-sm leading-snug">{goal.title}</h3>
+          <Link href={`/goals/${goal.id}`} className="hover:text-teal-700 transition-colors">
+            <h3 className="font-semibold text-sm leading-snug">{goal.title}</h3>
+          </Link>
           {goal.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{goal.description}</p>}
-          {actionCount > 0 && (
-            <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium mt-1 inline-block">
-              {actionCount} action{actionCount === 1 ? "" : "s"}
-            </span>
-          )}
+          <div className="flex flex-wrap gap-1 mt-1">
+            {stepCount && stepCount.total > 0 && (
+              <span className="text-xs bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full font-medium">
+                {stepCount.done}/{stepCount.total} steps
+              </span>
+            )}
+            {actionCount > 0 && (
+              <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">
+                {actionCount} action{actionCount === 1 ? "" : "s"}
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <button
@@ -206,9 +216,18 @@ export function GoalCard({ goal, savings, tasks = [], actionCount = 0 }: { goal:
         </div>
       )}
 
-      {goal.targetDate && (
-        <p className="text-xs text-gray-400">Target: {goal.targetDate}</p>
-      )}
+      <div className="flex items-center justify-between pt-1 border-t mt-1">
+        {goal.targetDate
+          ? <p className="text-xs text-gray-400">Target: {goal.targetDate}</p>
+          : <span />
+        }
+        <Link
+          href={`/goals/${goal.id}`}
+          className="flex items-center gap-0.5 text-xs text-teal-600 hover:text-teal-800 font-medium"
+        >
+          View steps <ChevronRight className="w-3 h-3" />
+        </Link>
+      </div>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-w-md">
