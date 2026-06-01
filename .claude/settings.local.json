@@ -91,7 +91,9 @@
       "Bash(git commit -m 'Fix goal edit/delete dropdown not working *)",
       "Bash(git commit -m 'Replace goal dropdown menu with direct edit/delete buttons *)",
       "Bash(node scripts/add-goal-steps-table.mjs)",
-      "Bash(git commit -m 'Add goal steps — checklist + calendar linking per goal *)"
+      "Bash(git commit -m 'Add goal steps — checklist + calendar linking per goal *)",
+      "Bash(git commit -m 'Add teal lightning bolt favicon *)",
+      "Bash(git commit -m 'Rebuild finance section — single simple page *)"
     ]
   }
 }

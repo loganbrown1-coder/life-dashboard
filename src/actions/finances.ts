@@ -117,6 +117,46 @@ export async function logQuickSpend(date: string, amount: number): Promise<{ ok:
   return { ok: true };
 }
 
+// Simple one-tap spend/income logger — auto-picks first account, creates "Cash" if none exists
+export async function logSpend(
+  amount: number,
+  category: string,
+  description: string,
+  type: "expense" | "income" = "expense",
+  date?: string,
+): Promise<{ ok: boolean }> {
+  let account = await db.select().from(accounts).limit(1).get();
+  if (!account) {
+    const id = uuid();
+    await db.insert(accounts).values({
+      id, createdAt: now(), updatedAt: now(),
+      name: "Cash", type: "cash", currency: "GBP", currentBalance: 0,
+    });
+    account = await db.select().from(accounts).where(eq(accounts.id, id)).limit(1).get()!;
+  }
+  if (!account) return { ok: false };
+  const txDate = date ?? new Date().toISOString().slice(0, 10);
+  await db.insert(transactions).values({
+    id: uuid(), createdAt: now(), updatedAt: now(),
+    date: txDate,
+    accountId: account.id,
+    amount,
+    currency: account.currency,
+    type,
+    category,
+    description: description || null,
+    isRecurring: false,
+    amountInBaseCurrency: amount,
+  });
+  const delta = type === "income" ? +amount : -amount;
+  await db.update(accounts)
+    .set({ currentBalance: account.currentBalance + delta, updatedAt: now() })
+    .where(eq(accounts.id, account.id));
+  revalidatePath("/finances");
+  revalidatePath("/");
+  return { ok: true };
+}
+
 export async function deleteTransaction(id: string) {
   // Reverse the balance effect before deleting so accounts stay accurate
   const tx = await db.select().from(transactions).where(eq(transactions.id, id)).limit(1).get();
