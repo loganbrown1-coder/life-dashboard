@@ -17,6 +17,7 @@ import {
   ChevronRight,
   LayoutDashboard,
   LogOut,
+  ListTodo,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +28,7 @@ const navItems = [
   { href: "/food",      label: "Food",      icon: UtensilsCrossed },
   { href: "/finances",  label: "Finances",  icon: Wallet },
   { href: "/goals",     label: "Goals",     icon: Target },
+  { href: "/todo",      label: "To Do",     icon: ListTodo },
   { href: "/projects",  label: "Work",      icon: CheckSquare },
   { href: "/opspot",    label: "OpSpot",    icon: BarChart2 },
   { href: "/settings",  label: "Settings",  icon: Settings },

@@ -318,6 +318,17 @@ export const tasks = sqliteTable("tasks", {
 });
 
 // ---------------------------------------------------------------------------
+// SIMPLE TO-DO LIST
+// ---------------------------------------------------------------------------
+
+export const todos = sqliteTable("todos", {
+  ...baseColumns,
+  text: text("text").notNull(),
+  done: integer("done", { mode: "boolean" }).notNull().default(false),
+  completedAt: integer("completed_at", { mode: "timestamp" }),
+});
+
+// ---------------------------------------------------------------------------
 // SIDE HUSTLES
 // ---------------------------------------------------------------------------
 
