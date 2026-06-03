@@ -2,6 +2,10 @@ import { db } from "@/db";
 import { stepsLogs } from "@/db/schema";
 import { desc, gte, eq } from "drizzle-orm";
 
+export async function getAllSteps() {
+  return db.select().from(stepsLogs).orderBy(stepsLogs.date).all();
+}
+
 export async function getStepsLogs(limit = 30) {
   return db
     .select()
