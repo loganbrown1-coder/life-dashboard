@@ -290,17 +290,34 @@ function AppleHealthImport() {
     if (!preview) return;
     setImporting(true);
     startTransition(async () => {
+      let stepsImported = 0;
+      let weightImported = 0;
       try {
-        if (preview.steps.length > 0)  await importStepsFromCSV(preview.steps);
-        if (preview.weight.length > 0) await importWeightFromCSV(preview.weight);
-        setDone({ steps: preview.steps.length, weight: preview.weight.length });
-        setPreview(null);
-        router.refresh();
-      } catch {
-        toast.error("Import failed — please try again");
-      } finally {
+        if (preview.steps.length > 0) {
+          await importStepsFromCSV(preview.steps);
+          stepsImported = preview.steps.length;
+        }
+      } catch (e) {
+        console.error("Steps import error:", e);
+        toast.error("Steps import failed — try again");
         setImporting(false);
+        return;
       }
+      try {
+        if (preview.weight.length > 0) {
+          await importWeightFromCSV(preview.weight);
+          weightImported = preview.weight.length;
+        }
+      } catch (e) {
+        console.error("Weight import error:", e);
+        toast.error("Weight import failed — try again");
+        setImporting(false);
+        return;
+      }
+      setDone({ steps: stepsImported, weight: weightImported });
+      setPreview(null);
+      router.refresh();
+      setImporting(false);
     });
   }
 

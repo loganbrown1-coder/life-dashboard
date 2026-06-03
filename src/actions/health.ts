@@ -145,46 +145,42 @@ export async function logSteps(data: z.infer<typeof StepsSchema>) {
 }
 
 export async function importWeightFromCSV(rows: Array<{ date: string; weightKg: number }>) {
-  for (const row of rows) {
-    // Only import if no existing entry for this date
-    const existing = await db
-      .select()
-      .from(weightLogs)
-      .where(eq(weightLogs.date, row.date))
-      .limit(1)
-      .get();
-    if (!existing) {
-      await db.insert(weightLogs).values({
-        id: uuid(),
-        createdAt: now(),
-        updatedAt: now(),
-        date: row.date,
-        weightKg: row.weightKg,
-      });
-    }
+  if (rows.length === 0) return;
+  // One query to get all existing dates
+  const existing = await db.select({ date: weightLogs.date }).from(weightLogs).all();
+  const existingDates = new Set(existing.map((r) => r.date));
+  const newRows = rows.filter((r) => !existingDates.has(r.date));
+  if (newRows.length === 0) return;
+  // Batch insert in chunks of 200
+  const CHUNK = 200;
+  for (let i = 0; i < newRows.length; i += CHUNK) {
+    await db.insert(weightLogs).values(
+      newRows.slice(i, i + CHUNK).map((row) => ({
+        id: uuid(), createdAt: now(), updatedAt: now(),
+        date: row.date, weightKg: row.weightKg,
+      }))
+    );
   }
   revalidatePath("/health");
   revalidatePath("/health/weight");
 }
 
 export async function importStepsFromCSV(rows: Array<{ date: string; stepCount: number }>) {
-  for (const row of rows) {
-    const existing = await db
-      .select()
-      .from(stepsLogs)
-      .where(eq(stepsLogs.date, row.date))
-      .limit(1)
-      .get();
-    if (!existing) {
-      await db.insert(stepsLogs).values({
-        id: uuid(),
-        createdAt: now(),
-        updatedAt: now(),
-        date: row.date,
-        stepCount: row.stepCount,
-        source: "import",
-      });
-    }
+  if (rows.length === 0) return;
+  // One query to get all existing dates
+  const existing = await db.select({ date: stepsLogs.date }).from(stepsLogs).all();
+  const existingDates = new Set(existing.map((r) => r.date));
+  const newRows = rows.filter((r) => !existingDates.has(r.date));
+  if (newRows.length === 0) return;
+  // Batch insert in chunks of 200
+  const CHUNK = 200;
+  for (let i = 0; i < newRows.length; i += CHUNK) {
+    await db.insert(stepsLogs).values(
+      newRows.slice(i, i + CHUNK).map((row) => ({
+        id: uuid(), createdAt: now(), updatedAt: now(),
+        date: row.date, stepCount: row.stepCount, source: "import",
+      }))
+    );
   }
   revalidatePath("/health/steps");
 }
