@@ -178,7 +178,7 @@ export async function importStepsFromCSV(rows: Array<{ date: string; stepCount: 
     await db.insert(stepsLogs).values(
       newRows.slice(i, i + CHUNK).map((row) => ({
         id: uuid(), createdAt: now(), updatedAt: now(),
-        date: row.date, stepCount: row.stepCount, source: "import",
+        date: row.date, stepCount: row.stepCount, source: "import" as const,
       }))
     );
   }
