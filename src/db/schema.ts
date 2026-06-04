@@ -329,6 +329,37 @@ export const todos = sqliteTable("todos", {
 });
 
 // ---------------------------------------------------------------------------
+// OPSPOT WORK TOOLS
+// ---------------------------------------------------------------------------
+
+export const workTodos = sqliteTable("work_todos", {
+  ...baseColumns,
+  text: text("text").notNull(),
+  done: integer("done", { mode: "boolean" }).notNull().default(false),
+  completedAt: integer("completed_at", { mode: "timestamp" }),
+});
+
+export const workHabits = sqliteTable("work_habits", {
+  ...baseColumns,
+  title: text("title").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+});
+
+export const workHabitLogs = sqliteTable("work_habit_logs", {
+  ...baseColumns,
+  habitId: text("habit_id").notNull().references(() => workHabits.id, { onDelete: "cascade" }),
+  date: text("date").notNull(), // YYYY-MM-DD
+  done: integer("done", { mode: "boolean" }).notNull().default(true),
+});
+
+export const workFocus = sqliteTable("work_focus", {
+  ...baseColumns,
+  date: text("date").notNull().unique(), // YYYY-MM-DD
+  text: text("text").notNull(),
+});
+
+// ---------------------------------------------------------------------------
 // SIDE HUSTLES
 // ---------------------------------------------------------------------------
 

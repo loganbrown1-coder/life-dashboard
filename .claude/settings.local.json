@@ -93,7 +93,32 @@
       "Bash(node scripts/add-goal-steps-table.mjs)",
       "Bash(git commit -m 'Add goal steps — checklist + calendar linking per goal *)",
       "Bash(git commit -m 'Add teal lightning bolt favicon *)",
-      "Bash(git commit -m 'Rebuild finance section — single simple page *)"
+      "Bash(git commit -m 'Rebuild finance section — single simple page *)",
+      "Bash(node scripts/add-todos-table.mjs)",
+      "Bash(grep -v \"^$\")",
+      "Bash(git commit -m 'Add To Do page *)",
+      "Bash(rm \"/Users/logan/Desktop/home life/Claude/Projects/life-dashboard/.git/index.lock\")",
+      "Bash(pkill -f \"git\")",
+      "Bash(rm -f \"/Users/logan/Desktop/home life/Claude/Projects/life-dashboard/.git/index.lock\")",
+      "Bash(git -C \"/Users/logan/Desktop/home life/Claude/Projects/life-dashboard\" config --list)",
+      "Bash(GIT_TERMINAL_PROMPT=0 GIT_EDITOR=true git -C \"/Users/logan/Desktop/home life/Claude/Projects/life-dashboard\" add \"src/app/todo/page.tsx\" \"src/components/todo/todo-client.tsx\" \"src/actions/todos.ts\" \"scripts/add-todos-table.mjs\" \"src/db/schema.ts\" \"src/components/sidebar.tsx\" \"src/components/mobile-nav.tsx\")",
+      "Bash(GIT_TERMINAL_PROMPT=0 GIT_EDITOR=true git -C \"/Users/logan/Desktop/home life/Claude/Projects/life-dashboard\" diff --cached --name-only)",
+      "Bash(GIT_TERMINAL_PROMPT=0 GIT_EDITOR=true git -C '/Users/logan/Desktop/home life/Claude/Projects/life-dashboard' commit -m 'Add To Do page *)",
+      "Bash(GIT_TERMINAL_PROMPT=0 git -C \"/Users/logan/Desktop/home life/Claude/Projects/life-dashboard\" log --oneline -3)",
+      "Bash(git config *)",
+      "Bash(python3 -c ' *)",
+      "Bash(git-lfs version *)",
+      "Bash(GIT_LFS_SKIP_SMUDGE=1 GIT_TERMINAL_PROMPT=0 git -C \"/Users/logan/Desktop/home life/Claude/Projects/life-dashboard\" status --short)",
+      "Bash(GIT_CONFIG_COUNT=4 GIT_CONFIG_KEY_0=filter.lfs.clean GIT_CONFIG_VALUE_0=cat GIT_CONFIG_KEY_1=filter.lfs.smudge GIT_CONFIG_VALUE_1=cat GIT_CONFIG_KEY_2=filter.lfs.process GIT_CONFIG_VALUE_2='' GIT_CONFIG_KEY_3=filter.lfs.required GIT_CONFIG_VALUE_3=false GIT_TERMINAL_PROMPT=0 git -C '/Users/logan/Desktop/home life/Claude/Projects/life-dashboard' status --short)",
+      "Bash(git -C \"/Users/logan/Desktop/home life/Claude/Projects/life-dashboard\" log --oneline -3)",
+      "Bash(git -C \"/Users/logan/Desktop/home life/Claude/Projects/life-dashboard\" ls-files --cached -- \"src/app/todo/page.tsx\" \"src/components/todo/todo-client.tsx\" \"src/actions/todos.ts\")",
+      "Bash(git -C \"/Users/logan/Desktop/home life/Claude/Projects/life-dashboard\" ls-files --cached -- \"scripts/add-todos-table.mjs\" \"src/db/schema.ts\" \"src/components/sidebar.tsx\" \"src/components/mobile-nav.tsx\")",
+      "Bash(git -C \"/Users/logan/Desktop/home life/Claude/Projects/life-dashboard\" diff --cached --name-only HEAD)",
+      "Bash(git -C \"/Users/logan/Desktop/home life/Claude/Projects/life-dashboard\" rev-parse HEAD:src/app/todo/page.tsx)",
+      "Bash(git -C \"/Users/logan/Desktop/home life/Claude/Projects/life-dashboard\" rev-parse HEAD)",
+      "Bash(git -C \"/Users/logan/Desktop/home life/Claude/Projects/life-dashboard\" rev-parse HEAD:src/db/schema.ts)",
+      "Bash(git commit -m 'Fix TypeScript enum error in importStepsFromCSV *)",
+      "Bash(node scripts/add-work-tools-tables.mjs)"
     ]
   }
 }
