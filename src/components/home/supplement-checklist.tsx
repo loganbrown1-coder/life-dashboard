@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { Check, Pill } from "lucide-react";
-import { takeSupplement } from "@/actions/health";
+import { takeSupplement, unlogSupplement } from "@/actions/health";
 import { toast } from "sonner";
 
 type Supp = { id: string; name: string; takenToday: boolean };
@@ -26,19 +26,23 @@ export function SupplementChecklist({ supplements }: { supplements: Supp[] }) {
         {supplements.map((s) => (
           <button
             key={s.id}
-            disabled={s.takenToday}
             onClick={() => {
-              if (s.takenToday) return;
               startTransition(async () => {
-                await takeSupplement(s.id);
-                toast.success(`${s.name} logged`);
+                if (s.takenToday) {
+                  await unlogSupplement(s.id);
+                  toast.success(`${s.name} unlogged`);
+                } else {
+                  await takeSupplement(s.id);
+                  toast.success(`${s.name} logged`);
+                }
               });
             }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all select-none
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all select-none active:scale-95 cursor-pointer
               ${s.takenToday
-                ? "bg-green-100 text-green-700 cursor-default"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200 active:scale-95 cursor-pointer"
+                ? "bg-green-100 text-green-700 hover:bg-red-50 hover:text-red-500"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
+            title={s.takenToday ? "Click to unlog" : "Click to log"}
           >
             {s.takenToday && <Check className="w-3 h-3" />}
             {s.name}

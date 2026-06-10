@@ -229,6 +229,25 @@ export async function takeSupplement(supplementId: string) {
   revalidatePath("/health/supplements");
 }
 
+export async function unlogSupplement(supplementId: string) {
+  const today = new Date().toISOString().slice(0, 10);
+  const log = await db
+    .select()
+    .from(supplementLogs)
+    .where(eq(supplementLogs.supplementId, supplementId))
+    .all();
+  // Delete the most recent log from today
+  const todayLog = log
+    .filter((l) => l.takenAt.toISOString().slice(0, 10) === today)
+    .sort((a, b) => b.takenAt.getTime() - a.takenAt.getTime())[0];
+  if (todayLog) {
+    await db.delete(supplementLogs).where(eq(supplementLogs.id, todayLog.id));
+  }
+  revalidatePath("/");
+  revalidatePath("/health");
+  revalidatePath("/health/supplements");
+}
+
 // ── Sleep ─────────────────────────────────────────────────────────────────────
 
 export async function logSleep(date: string, durationMinutes: number) {
