@@ -163,6 +163,13 @@ export const transactions = sqliteTable("transactions", {
   isRecurring: integer("is_recurring", { mode: "boolean" }).notNull().default(false),
 });
 
+export const balanceLogs = sqliteTable("balance_logs", {
+  ...baseColumns,
+  date: text("date").notNull(),      // YYYY-MM-DD
+  balanceGbp: real("balance_gbp").notNull(),
+  note: text("note"),
+});
+
 export const currencyRates = sqliteTable("currency_rates", {
   ...baseColumns,
   currencyCode: text("currency_code").notNull().unique(),

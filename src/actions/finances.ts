@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { accounts, transactions, currencyRates, budgets, bills, savingsGoals, investments } from "@/db/schema";
+import { accounts, transactions, currencyRates, budgets, bills, savingsGoals, investments, balanceLogs } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { addWeeks, addMonths, addYears, parseISO, format } from "date-fns";
@@ -155,6 +155,26 @@ export async function logSpend(
   revalidatePath("/finances");
   revalidatePath("/");
   return { ok: true };
+}
+
+// ── Balance log ───────────────────────────────────────────────────────────────
+
+export async function logBalance(balanceGbp: number, note?: string, date?: string) {
+  const logDate = date ?? new Date().toISOString().slice(0, 10);
+  // Upsert — one entry per day
+  const existing = await db.select().from(balanceLogs).where(eq(balanceLogs.date, logDate)).limit(1).get();
+  if (existing) {
+    await db.update(balanceLogs).set({ balanceGbp, note: note ?? null, updatedAt: now() }).where(eq(balanceLogs.id, existing.id));
+  } else {
+    await db.insert(balanceLogs).values({ id: uuid(), createdAt: now(), updatedAt: now(), date: logDate, balanceGbp, note: note ?? null });
+  }
+  revalidatePath("/finances");
+  revalidatePath("/");
+}
+
+export async function deleteBalanceLog(id: string) {
+  await db.delete(balanceLogs).where(eq(balanceLogs.id, id));
+  revalidatePath("/finances");
 }
 
 export async function deleteTransaction(id: string) {

@@ -1,11 +1,9 @@
 import { SimpleFinanceClient } from "@/components/finances/simple-finance-client";
-import {
-  getTransactionsForMonth,
-  getMonthTotals,
-  getBudgets,
-  getSpendingByCategory,
-} from "@/db/queries/finances";
+import { getTransactionsForMonth, getBudgets, getSpendingByCategory } from "@/db/queries/finances";
 import { getUserOptions } from "@/db/queries/user-options";
+import { db } from "@/db";
+import { balanceLogs } from "@/db/schema";
+import { desc } from "drizzle-orm";
 import { format } from "date-fns";
 
 export default async function FinancesPage() {
@@ -13,15 +11,13 @@ export default async function FinancesPage() {
   const year  = now.getFullYear();
   const month = now.getMonth() + 1;
 
-  const [transactions, totals, budgets, categorySpend, categoryOptions] = await Promise.all([
+  const [transactions, budgets, categorySpend, categoryOptions, balanceHistory] = await Promise.all([
     getTransactionsForMonth(year, month),
-    getMonthTotals(year, month),
     getBudgets(),
     getSpendingByCategory(year, month),
     getUserOptions("transaction_category"),
+    db.select().from(balanceLogs).orderBy(desc(balanceLogs.date)).limit(60).all(),
   ]);
-
-  const categories = categoryOptions.map((o) => o.label);
 
   return (
     <div>
@@ -32,10 +28,10 @@ export default async function FinancesPage() {
 
       <SimpleFinanceClient
         transactions={transactions}
-        totals={totals}
+        balanceLogs={balanceHistory.map((b) => ({ id: b.id, date: b.date, balanceGbp: b.balanceGbp, note: b.note }))}
         budgets={budgets}
         categorySpend={categorySpend}
-        categories={categories}
+        categories={categoryOptions.map((o) => o.label)}
         month={format(now, "MMMM yyyy")}
       />
     </div>
