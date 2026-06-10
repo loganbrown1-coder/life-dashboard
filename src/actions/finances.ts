@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { accounts, transactions, currencyRates, budgets, bills, savingsGoals, investments, balanceLogs } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { accounts, transactions, currencyRates, budgets, bills, savingsGoals, investments, balanceLogs, userOptions } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { addWeeks, addMonths, addYears, parseISO, format } from "date-fns";
 
@@ -155,6 +155,20 @@ export async function logSpend(
   revalidatePath("/finances");
   revalidatePath("/");
   return { ok: true };
+}
+
+// ── Finance settings (weekly pot etc.) ───────────────────────────────────────
+
+export async function setFinanceSetting(key: string, value: string) {
+  const existing = await db.select().from(userOptions)
+    .where(and(eq(userOptions.type, "finance_setting"), eq(userOptions.value, key)))
+    .limit(1).get();
+  if (existing) {
+    await db.update(userOptions).set({ label: value, updatedAt: now() }).where(eq(userOptions.id, existing.id));
+  } else {
+    await db.insert(userOptions).values({ id: uuid(), createdAt: now(), updatedAt: now(), type: "finance_setting", value: key, label: value, orderIndex: 0 });
+  }
+  revalidatePath("/finances");
 }
 
 // ── Balance log ───────────────────────────────────────────────────────────────
