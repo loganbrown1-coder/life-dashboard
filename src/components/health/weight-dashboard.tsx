@@ -170,7 +170,7 @@ export function WeightDashboard({ allLogs }: { allLogs: Entry[] }) {
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">kg</span>
                     <input
                       type="number"
-                      step="0.1"
+                      step="0.01"
                       placeholder={goalKg ? String(goalKg) : "Goal weight"}
                       value={goalInput}
                       onChange={(e) => setGoalInput(e.target.value)}

@@ -2,28 +2,27 @@
 
 import { useState, useEffect } from "react";
 import { format, subDays } from "date-fns";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Moon, Footprints, X, ChevronRight, PoundSterling } from "lucide-react";
-import { logSteps, logSleep } from "@/actions/health";
-import { logQuickSpend } from "@/actions/finances";
-import { upsertCheckIn } from "@/actions/check-in";
+import { Moon, Footprints, X, ChevronRight, Scale, PiggyBank } from "lucide-react";
+import { logSteps, logSleep, logWeight } from "@/actions/health";
+import { logPotRemaining, upsertCheckIn } from "@/actions/check-in";
 import { toast } from "sonner";
 
 type Props = {
-  /** Passed from server — null means no record yet for today */
   checkInDismissed: boolean;
   today: string;
+  weeklyPotGbp: number;
 };
 
-type Step = "steps" | "sleep" | "spend" | "done";
+type Step = "steps" | "sleep" | "weight" | "pot" | "done";
 
-export function MorningCheckIn({ checkInDismissed, today }: Props) {
-  const [visible, setVisible] = useState(false);
-  const [step, setStep] = useState<Step>("steps");
+export function MorningCheckIn({ checkInDismissed, today, weeklyPotGbp }: Props) {
+  const [visible, setVisible]           = useState(false);
+  const [step, setStep]                 = useState<Step>("steps");
   const [stepsValue, setStepsValue]     = useState("");
   const [sleepHours, setSleepHours]     = useState("");
   const [sleepMinutes, setSleepMinutes] = useState("");
-  const [spendValue, setSpendValue]     = useState("");
+  const [weightValue, setWeightValue]   = useState("");
+  const [potValue, setPotValue]         = useState("");
   const [saving, setSaving]             = useState(false);
 
   const yesterday = format(subDays(new Date(), 1), "yyyy-MM-dd");
@@ -63,23 +62,29 @@ export function MorningCheckIn({ checkInDismissed, today }: Props) {
         : `${sleepMinutes}m`;
       toast.success(`${display} sleep logged`);
     }
-    setStep("spend");
+    setStep("weight");
   }
 
-  async function handleSpendDone() {
-    const amount = Number(spendValue);
-    if (amount > 0) {
+  async function handleWeightDone() {
+    const kg = parseFloat(weightValue);
+    if (!isNaN(kg) && kg > 0) {
       setSaving(true);
-      const result = await logQuickSpend(yesterday, amount);
-      if (result.ok) {
-        await upsertCheckIn(today, { spendLogged: true, dismissed: true });
-        toast.success(`£${amount.toFixed(2)} spending logged`);
-      } else {
-        // No bank account set up yet — warn instead of silently dropping the data
-        toast.warning("No bank account set up yet — go to Finances → Settings to add one, then re-enter this amount.");
-        await upsertCheckIn(today, { dismissed: true });
-      }
+      await logWeight({ date: today, weightKg: kg });
+      await upsertCheckIn(today, { weightLogged: true });
       setSaving(false);
+      toast.success(`${kg} kg logged`);
+    }
+    setStep("pot");
+  }
+
+  async function handlePotDone() {
+    const remaining = parseFloat(potValue);
+    if (!isNaN(remaining) && remaining >= 0) {
+      setSaving(true);
+      await logPotRemaining(remaining);
+      await upsertCheckIn(today, { potLogged: true, dismissed: true });
+      setSaving(false);
+      toast.success(`£${remaining.toFixed(0)} left this week — noted!`);
     } else {
       await upsertCheckIn(today, { dismissed: true });
     }
@@ -88,28 +93,27 @@ export function MorningCheckIn({ checkInDismissed, today }: Props) {
 
   if (!visible) return null;
 
-  const stepNum   = step === "steps" ? 1 : step === "sleep" ? 2 : 3;
-  const stepTotal = 3;
+  const stepIndex = ["steps", "sleep", "weight", "pot"].indexOf(step) + 1;
+  const stepTotal = 4;
 
   return (
     <div className="rounded-xl border-2 border-teal-200 bg-gradient-to-br from-teal-50 to-white shadow-sm p-5 relative">
       {/* Dismiss */}
-      <button
-        onClick={dismiss}
-        className="absolute top-3 right-3 text-gray-300 hover:text-gray-500"
-      >
+      <button onClick={dismiss} className="absolute top-3 right-3 text-gray-300 hover:text-gray-500">
         <X className="w-4 h-4" />
       </button>
 
       {/* Step dots */}
       <div className="flex items-center gap-1.5 mb-4">
-        {[1, 2, 3].map((n) => (
+        {[1, 2, 3, 4].map((n) => (
           <div
             key={n}
-            className={`h-1.5 rounded-full transition-all ${n === stepNum ? "w-6 bg-teal-500" : n < stepNum ? "w-3 bg-teal-300" : "w-3 bg-gray-200"}`}
+            className={`h-1.5 rounded-full transition-all ${
+              n === stepIndex ? "w-6 bg-teal-500" : n < stepIndex ? "w-3 bg-teal-300" : "w-3 bg-gray-200"
+            }`}
           />
         ))}
-        <span className="text-[10px] text-gray-400 ml-1">{stepNum}/{stepTotal}</span>
+        <span className="text-[10px] text-gray-400 ml-1">{stepIndex}/{stepTotal}</span>
       </div>
 
       {/* Step 1: Steps */}
@@ -123,6 +127,7 @@ export function MorningCheckIn({ checkInDismissed, today }: Props) {
           <div className="flex gap-2">
             <input
               type="number"
+              inputMode="numeric"
               placeholder="e.g. 9500"
               value={stepsValue}
               onChange={(e) => setStepsValue(e.target.value)}
@@ -138,9 +143,7 @@ export function MorningCheckIn({ checkInDismissed, today }: Props) {
               Next <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
-          <button onClick={() => setStep("sleep")} className="text-xs text-gray-400 hover:text-gray-500">
-            Skip
-          </button>
+          <button onClick={() => setStep("sleep")} className="text-xs text-gray-400 hover:text-gray-500">Skip</button>
         </div>
       )}
 
@@ -155,9 +158,9 @@ export function MorningCheckIn({ checkInDismissed, today }: Props) {
           <div className="flex gap-2 items-center">
             <input
               type="number"
+              inputMode="numeric"
               placeholder="Hours"
-              min={0}
-              max={24}
+              min={0} max={24}
               value={sleepHours}
               onChange={(e) => setSleepHours(e.target.value)}
               autoFocus
@@ -166,9 +169,9 @@ export function MorningCheckIn({ checkInDismissed, today }: Props) {
             <span className="text-sm text-gray-500">h</span>
             <input
               type="number"
+              inputMode="numeric"
               placeholder="Mins"
-              min={0}
-              max={59}
+              min={0} max={59}
               value={sleepMinutes}
               onChange={(e) => setSleepMinutes(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleSleepDone(); }}
@@ -183,47 +186,81 @@ export function MorningCheckIn({ checkInDismissed, today }: Props) {
               Next <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
-          <button onClick={() => setStep("spend")} className="text-xs text-gray-400 hover:text-gray-500">
-            Skip
-          </button>
+          <button onClick={() => setStep("weight")} className="text-xs text-gray-400 hover:text-gray-500">Skip</button>
         </div>
       )}
 
-      {/* Step 3: Spending */}
-      {step === "spend" && (
+      {/* Step 3: Weight */}
+      {step === "weight" && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <PoundSterling className="w-5 h-5 text-green-600" />
-            <h3 className="font-semibold text-gray-900">How much did you spend?</h3>
+            <Scale className="w-5 h-5 text-purple-500" />
+            <h3 className="font-semibold text-gray-900">What&apos;s your weight today?</h3>
           </div>
-          <p className="text-sm text-gray-500">Yesterday&apos;s rough total spending</p>
+          <p className="text-sm text-gray-500">Best logged first thing in the morning</p>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                placeholder="e.g. 82.50"
+                value={weightValue}
+                onChange={(e) => setWeightValue(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleWeightDone(); }}
+                autoFocus
+                className="w-full rounded-lg border border-gray-200 px-3 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">kg</span>
+            </div>
+            <button
+              onClick={handleWeightDone}
+              disabled={saving}
+              className="inline-flex items-center gap-1 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+            >
+              Next <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <button onClick={() => setStep("pot")} className="text-xs text-gray-400 hover:text-gray-500">Skip</button>
+        </div>
+      )}
+
+      {/* Step 4: Pot remaining */}
+      {step === "pot" && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <PiggyBank className="w-5 h-5 text-green-600" />
+            <h3 className="font-semibold text-gray-900">How much left this week?</h3>
+          </div>
+          <p className="text-sm text-gray-500">
+            Your weekly pot is{" "}
+            <span className="font-semibold text-gray-700">£{weeklyPotGbp}</span> — how much do you have left?
+          </p>
           <div className="flex gap-2">
             <div className="relative flex-1">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">£</span>
               <input
                 type="number"
-                placeholder="0.00"
+                inputMode="decimal"
+                step="1"
+                placeholder="e.g. 120"
                 min={0}
-                step={0.01}
-                value={spendValue}
-                onChange={(e) => setSpendValue(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleSpendDone(); }}
+                value={potValue}
+                onChange={(e) => setPotValue(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handlePotDone(); }}
                 autoFocus
                 className="w-full rounded-lg border border-gray-200 pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
               />
             </div>
             <button
-              onClick={handleSpendDone}
+              onClick={handlePotDone}
               disabled={saving}
               className="inline-flex items-center gap-1 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
             >
-              Done
+              Done ✓
             </button>
           </div>
-          <p className="text-[10px] text-gray-400">Logged as &quot;Other&quot; — go to Finances to categorise</p>
-          <button onClick={dismiss} className="text-xs text-gray-400 hover:text-gray-500">
-            Skip
-          </button>
+          <button onClick={dismiss} className="text-xs text-gray-400 hover:text-gray-500">Skip</button>
         </div>
       )}
     </div>

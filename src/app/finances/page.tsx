@@ -1,23 +1,26 @@
-import { SimpleFinanceClient } from "@/components/finances/simple-finance-client";
-import { getTransactionsForMonth, getBudgets, getSpendingByCategory } from "@/db/queries/finances";
-import { getUserOptions } from "@/db/queries/user-options";
+import { FinanceClient } from "@/components/finances/finance-client";
 import { db } from "@/db";
-import { balanceLogs } from "@/db/schema";
-import { desc } from "drizzle-orm";
-import { format } from "date-fns";
+import { userOptions, potCheckins } from "@/db/schema";
+import { and, eq, gte } from "drizzle-orm";
+import { format, startOfWeek, subWeeks } from "date-fns";
 
 export default async function FinancesPage() {
-  const now   = new Date();
-  const year  = now.getFullYear();
-  const month = now.getMonth() + 1;
+  const now       = new Date();
+  const weekStart = format(startOfWeek(now, { weekStartsOn: 1 }), "yyyy-MM-dd");
+  const since     = format(subWeeks(now, 8), "yyyy-MM-dd");
 
-  const [transactions, budgets, categorySpend, categoryOptions, balanceHistory] = await Promise.all([
-    getTransactionsForMonth(year, month),
-    getBudgets(),
-    getSpendingByCategory(year, month),
-    getUserOptions("transaction_category"),
-    db.select().from(balanceLogs).orderBy(desc(balanceLogs.date)).limit(60).all(),
+  const [potSetting, savingsSetting, checkins] = await Promise.all([
+    db.select().from(userOptions)
+      .where(and(eq(userOptions.type, "finance_setting"), eq(userOptions.value, "weekly_pot_gbp")))
+      .limit(1).get(),
+    db.select().from(userOptions)
+      .where(and(eq(userOptions.type, "finance_setting"), eq(userOptions.value, "savings_pot_gbp")))
+      .limit(1).get(),
+    db.select().from(potCheckins).where(gte(potCheckins.date, since)).all(),
   ]);
+
+  const weeklyPotGbp  = potSetting     ? Number(potSetting.label)     : null;
+  const savingsPotGbp = savingsSetting ? Number(savingsSetting.label) : null;
 
   return (
     <div>
@@ -26,13 +29,13 @@ export default async function FinancesPage() {
         <p className="text-gray-500 mt-1">{format(now, "MMMM yyyy")}</p>
       </div>
 
-      <SimpleFinanceClient
-        transactions={transactions}
-        balanceLogs={balanceHistory.map((b) => ({ id: b.id, date: b.date, balanceGbp: b.balanceGbp, note: b.note }))}
-        budgets={budgets}
-        categorySpend={categorySpend}
-        categories={categoryOptions.map((o) => o.label)}
-        month={format(now, "MMMM yyyy")}
+      <FinanceClient
+        weeklyPotGbp={weeklyPotGbp}
+        savingsPotGbp={savingsPotGbp}
+        checkins={checkins.map((c) => ({
+          id: c.id, date: c.date, weekStart: c.weekStart, remainingGbp: c.remainingGbp,
+        }))}
+        currentWeekStart={weekStart}
       />
     </div>
   );

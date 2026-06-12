@@ -238,7 +238,7 @@ function parseAppleHealthXML(text: string): AppleHealthPreview | { error: string
       const kg = unit === "lb" ? val * 0.453592 : val;
       const existing = weightByDay[date];
       if (!existing || dateRaw > existing.time) {
-        weightByDay[date] = { value: parseFloat(kg.toFixed(1)), time: dateRaw };
+        weightByDay[date] = { value: parseFloat(kg.toFixed(2)), time: dateRaw };
       }
     }
     const weight = Object.entries(weightByDay)

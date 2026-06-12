@@ -20,7 +20,8 @@ import { SupplementChecklist } from "@/components/home/supplement-checklist";
 import { WorkoutWeekPlan } from "@/components/health/workout-week-plan";
 import { completeTask } from "@/actions/tasks";
 import { db } from "@/db";
-import { accounts } from "@/db/schema";
+import { accounts, userOptions } from "@/db/schema";
+import { and, eq } from "drizzle-orm";
 import { format, startOfWeek, addDays } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dumbbell, CheckSquare, Footprints, ChevronRight, PiggyBank } from "lucide-react";
@@ -67,6 +68,7 @@ export default async function HomePage() {
     workoutSchedule,
     weekWorkoutCompletions,
     workoutTypeOptions,
+    weeklyPotSetting,
   ] = await Promise.all([
     getRoutinesWithItems(),
     getRoutineLogsForDate(today),
@@ -86,7 +88,12 @@ export default async function HomePage() {
     getWorkoutSchedule(),
     getWorkoutsForRange(weekStart, weekEnd),
     getUserOptions("workout_type"),
+    db.select().from(userOptions)
+      .where(and(eq(userOptions.type, "finance_setting"), eq(userOptions.value, "weekly_pot_gbp")))
+      .limit(1).get(),
   ]);
+
+  const weeklyPotGbp = weeklyPotSetting ? Number(weeklyPotSetting.label) : 200;
 
   const morningRoutine = routinesWithItems.find((r) => r.timeOfDay === "morning");
   const eveningRoutine = routinesWithItems.find((r) => r.timeOfDay === "evening");
@@ -138,7 +145,7 @@ export default async function HomePage() {
       )}
 
       {/* Morning check-in */}
-      <MorningCheckIn checkInDismissed={checkIn?.dismissed ?? false} today={today} />
+      <MorningCheckIn checkInDismissed={checkIn?.dismissed ?? false} today={today} weeklyPotGbp={weeklyPotGbp} />
 
       {/* Weekly workout plan */}
       {workoutSchedule.length > 0 && (

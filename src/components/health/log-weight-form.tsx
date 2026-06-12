@@ -41,8 +41,8 @@ export function LogWeightForm() {
       <div>
         <Input
           type="number"
-          step="0.1"
-          placeholder="e.g. 82.5"
+          step="0.01"
+          placeholder="e.g. 82.50"
           className="max-w-[140px] text-lg font-medium"
           {...register("weightKg")}
         />

@@ -452,8 +452,20 @@ export const calendarEvents = sqliteTable("calendar_events", {
 export const checkInLogs = sqliteTable("check_in_logs", {
   ...baseColumns,
   date: text("date").notNull().unique(), // YYYY-MM-DD — one check-in per day
-  stepsLogged: integer("steps_logged", { mode: "boolean" }).notNull().default(false),
-  sleepLogged: integer("sleep_logged", { mode: "boolean" }).notNull().default(false),
-  spendLogged: integer("spend_logged", { mode: "boolean" }).notNull().default(false),
-  dismissed: integer("dismissed", { mode: "boolean" }).notNull().default(false),
+  stepsLogged:  integer("steps_logged",  { mode: "boolean" }).notNull().default(false),
+  sleepLogged:  integer("sleep_logged",  { mode: "boolean" }).notNull().default(false),
+  weightLogged: integer("weight_logged", { mode: "boolean" }).notNull().default(false),
+  potLogged:    integer("pot_logged",    { mode: "boolean" }).notNull().default(false),
+  dismissed:    integer("dismissed",     { mode: "boolean" }).notNull().default(false),
+});
+
+// ---------------------------------------------------------------------------
+// POT CHECK-INS — daily "how much left this week" reports
+// ---------------------------------------------------------------------------
+
+export const potCheckins = sqliteTable("pot_checkins", {
+  ...baseColumns,
+  date:         text("date").notNull().unique(), // YYYY-MM-DD
+  weekStart:    text("week_start").notNull(),    // Monday YYYY-MM-DD
+  remainingGbp: real("remaining_gbp").notNull(),
 });
