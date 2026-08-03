@@ -33,6 +33,12 @@ export async function toggleTodo(id: string, currentDone: boolean) {
   revalidatePath("/todo");
 }
 
+export async function updateTodo(id: string, text: string, category: TodoCategory) {
+  if (!text.trim()) return;
+  await db.update(todos).set({ text: text.trim(), category, updatedAt: now() }).where(eq(todos.id, id));
+  revalidatePath("/todo");
+}
+
 export async function deleteTodo(id: string) {
   await db.delete(todos).where(eq(todos.id, id));
   revalidatePath("/todo");
