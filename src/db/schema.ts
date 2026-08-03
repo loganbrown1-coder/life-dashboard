@@ -330,8 +330,9 @@ export const tasks = sqliteTable("tasks", {
 
 export const todos = sqliteTable("todos", {
   ...baseColumns,
-  text: text("text").notNull(),
-  done: integer("done", { mode: "boolean" }).notNull().default(false),
+  text:        text("text").notNull(),
+  category:    text("category").notNull().default("personal"), // opspot | personal | nice-cubes | other
+  done:        integer("done", { mode: "boolean" }).notNull().default(false),
   completedAt: integer("completed_at", { mode: "timestamp" }),
 });
 
