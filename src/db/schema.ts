@@ -470,3 +470,15 @@ export const potCheckins = sqliteTable("pot_checkins", {
   weekStart:    text("week_start").notNull(),    // Monday YYYY-MM-DD
   remainingGbp: real("remaining_gbp").notNull(),
 });
+
+// ---------------------------------------------------------------------------
+// NOTES
+// ---------------------------------------------------------------------------
+
+export const notes = sqliteTable("notes", {
+  ...baseColumns,
+  title:   text("title").notNull().default("Untitled"),
+  section: text("section").notNull().default("Personal"),
+  content: text("content").notNull().default(""),
+  pinnedAt: integer("pinned_at", { mode: "timestamp" }),
+});

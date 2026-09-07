@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   Home, Calendar, Dumbbell, UtensilsCrossed, Wallet,
-  Target, CheckSquare, BarChart2, Settings, Menu, LayoutDashboard, ListTodo,
+  Target, CheckSquare, BarChart2, Settings, Menu, LayoutDashboard, ListTodo, NotebookPen,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,7 @@ const navItems = [
   { href: "/finances", label: "Finances", icon: Wallet },
   { href: "/goals",    label: "Goals",    icon: Target },
   { href: "/todo",     label: "To Do",    icon: ListTodo },
+  { href: "/notes",    label: "Notes",    icon: NotebookPen },
   { href: "/projects", label: "Work",     icon: CheckSquare },
   { href: "/opspot",   label: "OpSpot",   icon: BarChart2 },
   { href: "/settings", label: "Settings", icon: Settings },
