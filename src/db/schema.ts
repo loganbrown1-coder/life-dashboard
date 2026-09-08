@@ -332,6 +332,7 @@ export const todos = sqliteTable("todos", {
   ...baseColumns,
   text:        text("text").notNull(),
   category:    text("category").notNull().default("personal"), // opspot | personal | nice-cubes | other
+  bucket:      text("bucket").notNull().default("general"),    // today | general
   done:        integer("done", { mode: "boolean" }).notNull().default(false),
   completedAt: integer("completed_at", { mode: "timestamp" }),
 });

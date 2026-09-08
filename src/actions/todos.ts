@@ -9,8 +9,9 @@ function uuid() { return crypto.randomUUID(); }
 function now()  { return new Date(); }
 
 export type TodoCategory = "opspot" | "personal" | "nice-cubes" | "other";
+export type TodoBucket   = "today" | "general";
 
-export async function addTodo(text: string, category: TodoCategory = "personal") {
+export async function addTodo(text: string, category: TodoCategory = "personal", bucket: TodoBucket = "general") {
   if (!text.trim()) return;
   await db.insert(todos).values({
     id: uuid(),
@@ -18,6 +19,7 @@ export async function addTodo(text: string, category: TodoCategory = "personal")
     updatedAt: now(),
     text: text.trim(),
     category,
+    bucket,
     done: false,
     completedAt: null,
   });
@@ -33,9 +35,9 @@ export async function toggleTodo(id: string, currentDone: boolean) {
   revalidatePath("/todo");
 }
 
-export async function updateTodo(id: string, text: string, category: TodoCategory) {
+export async function updateTodo(id: string, text: string, category: TodoCategory, bucket: TodoBucket) {
   if (!text.trim()) return;
-  await db.update(todos).set({ text: text.trim(), category, updatedAt: now() }).where(eq(todos.id, id));
+  await db.update(todos).set({ text: text.trim(), category, bucket, updatedAt: now() }).where(eq(todos.id, id));
   revalidatePath("/todo");
 }
 
@@ -44,11 +46,13 @@ export async function deleteTodo(id: string) {
   revalidatePath("/todo");
 }
 
-export async function clearCompleted(category?: TodoCategory) {
-  const conditions = category
-    ? and(eq(todos.done, true), eq(todos.category, category))
-    : eq(todos.done, true);
-  const completed = await db.select().from(todos).where(conditions).all();
+export async function clearCompleted(category?: TodoCategory, bucket?: TodoBucket) {
+  const clauses: ReturnType<typeof eq>[] = [eq(todos.done, true)];
+  if (category) clauses.push(eq(todos.category, category));
+  if (bucket)   clauses.push(eq(todos.bucket, bucket));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const condition = clauses.length === 1 ? clauses[0] : and(...(clauses as any));
+  const completed = await db.select().from(todos).where(condition).all();
   for (const t of completed) {
     await db.delete(todos).where(eq(todos.id, t.id));
   }
