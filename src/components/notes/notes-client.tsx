@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useRef, useEffect, useCallback } from "react";
-import { Plus, Trash2, Pin, Search, ChevronLeft, MoreHorizontal, FolderOpen } from "lucide-react";
+import { Plus, Trash2, Pin, Search, ChevronLeft, MoreHorizontal, FolderOpen, List } from "lucide-react";
 import { createNote, updateNote, deleteNote, pinNote } from "@/actions/notes";
 import { format, isToday, isYesterday } from "date-fns";
 import { toast } from "sonner";
@@ -340,6 +340,97 @@ function NoteEditor({ note, sections, onBack, onDelete }: {
     toast.success(next ? "Note pinned" : "Note unpinned");
   }
 
+  function handleBullet() {
+    const el = contentRef.current;
+    if (!el) return;
+    const selStart = el.selectionStart;
+    const selEnd   = el.selectionEnd;
+    const lines    = content.split("\n");
+
+    // Map each line to its [start, end] char positions in the full string
+    let pos = 0;
+    const lineRanges = lines.map((line) => {
+      const s = pos;
+      const e = pos + line.length;
+      pos = e + 1; // +1 for the "\n"
+      return { s, e };
+    });
+
+    const firstLine = lineRanges.findIndex(({ s, e }) => selStart <= e && selStart >= s - 1);
+    const first = Math.max(0, firstLine < 0 ? 0 : firstLine);
+    let last = first;
+    for (let i = first; i < lineRanges.length; i++) {
+      if (lineRanges[i].s <= selEnd) last = i;
+    }
+
+    // Toggle: if all selected lines already have bullets, remove them
+    const selectedLines = lines.slice(first, last + 1);
+    const allBulleted   = selectedLines.every((l) => l.startsWith("• "));
+
+    const numSelected = last - first + 1;
+    const delta       = allBulleted ? -2 : 2;
+
+    const newLines = lines.map((line, i) => {
+      if (i < first || i > last) return line;
+      if (allBulleted) return line.replace(/^• /, "");
+      return line.startsWith("• ") ? line : "• " + line;
+    });
+
+    handleContentChange(newLines.join("\n"));
+
+    requestAnimationFrame(() => {
+      if (!el) return;
+      el.selectionStart = Math.max(0, selStart + delta);
+      el.selectionEnd   = Math.max(0, selEnd + numSelected * delta);
+    });
+  }
+
+  function handleContentKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    const el = contentRef.current;
+    if (!el) return;
+
+    if (e.key === "Enter") {
+      const pos   = el.selectionStart;
+      const lines = el.value.slice(0, pos).split("\n");
+      const currentLine = lines[lines.length - 1];
+
+      if (currentLine.startsWith("• ")) {
+        e.preventDefault();
+        let next: string;
+        let nextCursor: number;
+        if (currentLine === "• ") {
+          // Empty bullet — remove it and stop
+          next       = el.value.slice(0, pos - 2) + "\n" + el.value.slice(pos);
+          nextCursor = pos - 1;
+        } else {
+          // Continue bullet on new line
+          next       = el.value.slice(0, pos) + "\n• " + el.value.slice(pos);
+          nextCursor = pos + 3;
+        }
+        // Update DOM immediately so subsequent keystrokes land in the right place
+        el.value = next;
+        el.selectionStart = el.selectionEnd = nextCursor;
+        handleContentChange(next);
+      }
+    }
+
+    if (e.key === "Tab") {
+      const pos = el.selectionStart;
+      const lines = el.value.slice(0, pos).split("\n");
+      const currentLine = lines[lines.length - 1];
+      if (currentLine.startsWith("• ") || currentLine.startsWith("  • ")) {
+        e.preventDefault();
+        const lineStart = pos - currentLine.length;
+        const indent    = e.shiftKey ? currentLine.replace(/^  /, "") : "  " + currentLine;
+        const next      = el.value.slice(0, lineStart) + indent + el.value.slice(pos);
+        const diff      = indent.length - currentLine.length;
+        el.value = next;
+        el.selectionStart = el.selectionEnd = pos + diff;
+        handleContentChange(next);
+      }
+    }
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Toolbar */}
@@ -360,6 +451,15 @@ function NoteEditor({ note, sections, onBack, onDelete }: {
         <span className="text-xs text-gray-400 flex-1 text-right">
           {saving ? <span className="text-teal-400">Saving…</span> : fmtDate(savedAt)}
         </span>
+
+        <button
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={handleBullet}
+          title="Bullet list (toggle selected lines)"
+          className="p-1.5 rounded-lg text-gray-400 hover:text-teal-500 hover:bg-gray-50 transition-colors"
+        >
+          <List className="w-4 h-4" />
+        </button>
 
         <button
           onClick={handlePin}
@@ -405,6 +505,7 @@ function NoteEditor({ note, sections, onBack, onDelete }: {
           ref={contentRef}
           value={content}
           onChange={(e) => handleContentChange(e.target.value)}
+          onKeyDown={handleContentKeyDown}
           placeholder="Start writing…"
           rows={1}
           className="w-full text-sm text-gray-700 placeholder-gray-300 focus:outline-none bg-transparent resize-none leading-relaxed min-h-[60vh]"
