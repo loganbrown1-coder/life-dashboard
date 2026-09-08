@@ -3,7 +3,7 @@
 import { useState, useTransition, useRef, useEffect, useCallback } from "react";
 import { Plus, Trash2, Pin, Search, ChevronLeft, MoreHorizontal, FolderOpen } from "lucide-react";
 import { createNote, updateNote, deleteNote, pinNote } from "@/actions/notes";
-import { format, isToday, isYesterday, parseISO } from "date-fns";
+import { format, isToday, isYesterday } from "date-fns";
 import { toast } from "sonner";
 
 type Note = {
@@ -285,9 +285,14 @@ function NoteEditor({ note, sections, onBack, onDelete }: {
   const [section, setSection]   = useState(note.section);
   const [pinned, setPinned]     = useState(!!note.pinnedAt);
   const [showMenu, setShowMenu] = useState(false);
+  const [savedAt, setSavedAt]   = useState<Date>(note.updatedAt);
+  const [saving, setSaving]     = useState(false);
   const [, start]               = useTransition();
   const saveTimer               = useRef<ReturnType<typeof setTimeout> | null>(null);
   const contentRef              = useRef<HTMLTextAreaElement>(null);
+
+  // Clean up timer on unmount so it doesn't trigger a stale re-render
+  useEffect(() => () => { if (saveTimer.current) clearTimeout(saveTimer.current); }, []);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -300,8 +305,13 @@ function NoteEditor({ note, sections, onBack, onDelete }: {
   // Debounced save on change
   const schedSave = useCallback((t: string, c: string, s: string) => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
+    setSaving(true);
     saveTimer.current = setTimeout(() => {
-      start(async () => { await updateNote(note.id, { title: t, content: c, section: s }); });
+      start(async () => {
+        await updateNote(note.id, { title: t, content: c, section: s });
+        setSaving(false);
+        setSavedAt(new Date());
+      });
     }, 800);
   }, [note.id]);
 
@@ -317,7 +327,10 @@ function NoteEditor({ note, sections, onBack, onDelete }: {
 
   function handleSectionChange(v: string) {
     setSection(v);
-    start(async () => { await updateNote(note.id, { section: v }); });
+    start(async () => {
+      await updateNote(note.id, { section: v });
+      setSavedAt(new Date());
+    });
   }
 
   function handlePin() {
@@ -345,7 +358,7 @@ function NoteEditor({ note, sections, onBack, onDelete }: {
         </select>
 
         <span className="text-xs text-gray-400 flex-1 text-right">
-          {fmtDate(note.updatedAt)}
+          {saving ? <span className="text-teal-400">Saving…</span> : fmtDate(savedAt)}
         </span>
 
         <button
