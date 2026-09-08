@@ -12,7 +12,7 @@ export async function createNote(title: string, section: string) {
   const id = uuid();
   await db.insert(notes).values({
     id, createdAt: now(), updatedAt: now(),
-    title: title.trim() || "Untitled",
+    title: title.trim(),
     section: section.trim() || "Personal",
     content: "",
     pinnedAt: null,
