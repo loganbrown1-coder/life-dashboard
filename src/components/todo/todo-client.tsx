@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, Check, Trash2, Pencil, X, Save } from "lucide-react";
 import {
   addTodo, toggleTodo, updateTodo, deleteTodo, clearCompleted,
@@ -27,7 +28,15 @@ const TABS: { key: Tab; label: string }[] = [
 ];
 
 export function TodoClient({ todos }: { todos: Todo[] }) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("all");
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (!document.hidden) router.refresh();
+    }, 15000);
+    return () => clearInterval(id);
+  }, [router]);
 
   const filtered = activeTab === "all"
     ? todos

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useRef, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, Trash2, Pin, Search, ChevronLeft, MoreHorizontal, FolderOpen, List } from "lucide-react";
 import { createNote, updateNote, deleteNote, pinNote } from "@/actions/notes";
 import { format, isToday, isYesterday } from "date-fns";
@@ -30,7 +31,15 @@ function preview(content: string) {
 const DEFAULT_SECTIONS = ["Personal", "Work", "Ideas"];
 
 export function NotesClient({ notes }: { notes: Note[] }) {
+  const router = useRouter();
   const [activeSection, setActiveSection] = useState<string | null>(null); // null = All Notes
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (!document.hidden) router.refresh();
+    }, 15000);
+    return () => clearInterval(id);
+  }, [router]);
   const [selectedId, setSelectedId]       = useState<string | null>(notes[0]?.id ?? null);
   const [search, setSearch]               = useState("");
   const [showList, setShowList]           = useState(true); // mobile: toggle list vs editor
