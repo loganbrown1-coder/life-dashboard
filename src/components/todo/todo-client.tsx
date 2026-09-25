@@ -68,7 +68,7 @@ export function TodoClient({ todos }: { todos: Todo[] }) {
       </div>
 
       {/* Two-column layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-[2fr_3fr] gap-6">
         <Column
           title="Today"
           bucket="today"

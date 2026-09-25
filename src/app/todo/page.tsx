@@ -8,7 +8,7 @@ export default async function TodoPage() {
   const pendingCount = allTodos.filter((t) => !t.done).length;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-4 py-8">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-gray-900">To Do</h1>
         <p className="text-gray-500 mt-1 text-sm">
