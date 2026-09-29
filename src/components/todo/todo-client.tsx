@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Check, Trash2, Pencil, X, Save } from "lucide-react";
+import { Plus, Check, Trash2, Pencil, X, Save, ArrowLeftRight } from "lucide-react";
 import {
   addTodo, toggleTodo, updateTodo, deleteTodo, clearCompleted,
   type TodoCategory, type TodoBucket,
@@ -204,6 +204,11 @@ function TodoRow({ todo }: { todo: Todo }) {
     start(async () => { await deleteTodo(todo.id); });
   }
 
+  function handleMoveBucket() {
+    const next: TodoBucket = todo.bucket === "today" ? "general" : "today";
+    start(async () => { await updateTodo(todo.id, todo.text, todo.category, next); });
+  }
+
   function handleSave() {
     if (!editText.trim()) return;
     start(async () => { await updateTodo(todo.id, editText.trim(), editCat, editBucket); });
@@ -287,6 +292,13 @@ function TodoRow({ todo }: { todo: Todo }) {
       </span>
 
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={handleMoveBucket}
+          title={todo.bucket === "today" ? "Move to General" : "Move to Today"}
+          className="p-1 rounded text-gray-300 hover:text-teal-500 hover:bg-teal-50 transition-colors"
+        >
+          <ArrowLeftRight className="w-3.5 h-3.5" />
+        </button>
         <button
           onClick={() => setEditing(true)}
           className="p-1 rounded text-gray-300 hover:text-teal-500 hover:bg-teal-50 transition-colors"
