@@ -29,7 +29,7 @@ const TABS: { key: Tab; label: string }[] = [
 
 export function TodoClient({ todos }: { todos: Todo[] }) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<Tab>("all");
+  const [activeTab, setActiveTab] = useState<Tab>("opspot");
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -113,7 +113,7 @@ function Column({
   function handleAdd() {
     const text = inputText.trim();
     if (!text) return;
-    const cat: TodoCategory = category ?? "personal";
+    const cat: TodoCategory = category ?? "opspot";
     start(async () => { await addTodo(text, cat, bucket); });
     setInputText("");
   }
