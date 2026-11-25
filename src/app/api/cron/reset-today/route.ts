@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { todos } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
   const auth = req.headers.get("authorization");
@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const result = await db
     .update(todos)
     .set({ bucket: "general", updatedAt: new Date() })
-    .where(eq(todos.bucket, "today"));
+    .where(and(eq(todos.bucket, "today"), eq(todos.pinnedToToday, false)));
 
   return NextResponse.json({ ok: true, moved: result.rowsAffected ?? 0 });
 }

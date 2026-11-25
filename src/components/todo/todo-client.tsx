@@ -2,9 +2,9 @@
 
 import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Check, Trash2, Pencil, X, Save, ArrowLeftRight } from "lucide-react";
+import { Plus, Check, Trash2, Pencil, X, Save, ArrowLeftRight, Pin } from "lucide-react";
 import {
-  addTodo, toggleTodo, updateTodo, deleteTodo, clearCompleted,
+  addTodo, toggleTodo, updateTodo, deleteTodo, clearCompleted, pinTodoToToday,
   type TodoCategory, type TodoBucket,
 } from "@/actions/todos";
 
@@ -14,6 +14,7 @@ type Todo = {
   category: TodoCategory;
   bucket: TodoBucket;
   done: boolean;
+  pinnedToToday: boolean;
   createdAt: Date;
 };
 
@@ -209,6 +210,10 @@ function TodoRow({ todo }: { todo: Todo }) {
     start(async () => { await updateTodo(todo.id, todo.text, todo.category, next); });
   }
 
+  function handlePin() {
+    start(async () => { await pinTodoToToday(todo.id, !todo.pinnedToToday); });
+  }
+
   function handleSave() {
     if (!editText.trim()) return;
     start(async () => { await updateTodo(todo.id, editText.trim(), editCat, editBucket); });
@@ -291,7 +296,22 @@ function TodoRow({ todo }: { todo: Todo }) {
         {todo.text}
       </span>
 
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-1">
+        {/* Pin — only on Today items; always visible when pinned */}
+        {todo.bucket === "today" && (
+          <button
+            onClick={handlePin}
+            title={todo.pinnedToToday ? "Unpin (will move at 3 AM)" : "Pin to Today (won't move at 3 AM)"}
+            className={`p-1 rounded transition-colors ${
+              todo.pinnedToToday
+                ? "text-teal-500"
+                : "opacity-0 group-hover:opacity-100 text-gray-300 hover:text-teal-500 hover:bg-teal-50"
+            }`}
+          >
+            <Pin className="w-3.5 h-3.5" />
+          </button>
+        )}
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
           onClick={handleMoveBucket}
           title={todo.bucket === "today" ? "Move to General" : "Move to Today"}
@@ -311,6 +331,7 @@ function TodoRow({ todo }: { todo: Todo }) {
         >
           <Trash2 className="w-3.5 h-3.5" />
         </button>
+        </div>
       </div>
     </div>
   );

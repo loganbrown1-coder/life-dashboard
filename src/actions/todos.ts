@@ -46,6 +46,11 @@ export async function deleteTodo(id: string) {
   revalidatePath("/todo");
 }
 
+export async function pinTodoToToday(id: string, pinned: boolean) {
+  await db.update(todos).set({ pinnedToToday: pinned, updatedAt: now() }).where(eq(todos.id, id));
+  revalidatePath("/todo");
+}
+
 export async function clearCompleted(category?: TodoCategory, bucket?: TodoBucket) {
   const clauses: ReturnType<typeof eq>[] = [eq(todos.done, true)];
   if (category) clauses.push(eq(todos.category, category));

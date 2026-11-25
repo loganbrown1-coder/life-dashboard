@@ -22,6 +22,7 @@ export default async function TodoPage() {
         category: (t.category ?? "personal") as "opspot" | "personal" | "nice-cubes" | "other",
         bucket:   (t.bucket   ?? "general")  as "today" | "general",
         done: t.done,
+        pinnedToToday: t.pinnedToToday ?? false,
         createdAt: t.createdAt,
       }))} />
     </div>
